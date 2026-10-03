@@ -1,14 +1,15 @@
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
 
-export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api',
+export const api = axios.create({
+  baseURL: process.env.VALIHA_MEMOIRE_API_URL || 'http://localhost:3000/api',
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
-apiClient.interceptors.request.use((config) => {
+api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -16,7 +17,7 @@ apiClient.interceptors.request.use((config) => {
   return config;
 }, (error) => Promise.reject(error));
 
-apiClient.interceptors.response.use(
+api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {

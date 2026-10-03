@@ -1,122 +1,283 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, GraduationCap } from "lucide-react";
-import { toast } from "sonner";
-
-import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/authStore";
-
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { authService } from "@/services/auth.service";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 
-const formSchema = z.object({
-  email: z.string().email("Email invalide"),
-  password: z.string().min(6, "Le mot de passe doit faire au moins 6 caractères"),
+const loginSchema = z.object({
+  email: z.string().min(1, "L'email est requis").email("Email invalide"),
+  password: z.string().min(1, "Le mot de passe est requis").min(6, "Le mot de passe doit faire au moins 6 caractères"),
 });
+
+type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
-  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true);
+  const onSubmit = async (data: LoginFormData) => {
+    setErrorMsg(null);
     try {
-      const data = await authService.login(values);
-      // Adaptation selon la forme exacte de votre backend NestJS
-      const token = data.access_token || data.token;
-      
-      if (!token || !data.user) {
+      const response = await authService.login({
+        email: data.email,
+        password: data.password,
+      });
+
+      const token = response.access_token || response.token;
+
+      if (!token || !response.user) {
         throw new Error("Réponse inattendue du serveur");
       }
-      
-      setAuth(data.user, token);
-      toast.success("Connexion réussie !");
+
+      setAuth(response.user, token);
       router.push("/dashboard");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || error.message || "Erreur de connexion");
-    } finally {
-      setIsLoading(false);
+      let errorMessage = "Identifiants invalides ou erreur réseau";
+
+      if (error.response?.data) {
+        const errorData = error.response.data;
+
+        if (Array.isArray(errorData)) {
+          errorMessage = errorData
+            .map((err) => err.msg || JSON.stringify(err))
+            .join(", ");
+        } else if (typeof errorData === "string") {
+          errorMessage = errorData;
+        } else if (errorData.detail) {
+          if (typeof errorData.detail === "string") {
+            errorMessage = errorData.detail;
+          } else if (Array.isArray(errorData.detail)) {
+            errorMessage = errorData.detail
+              .map((err: { msg: any }) => err.msg || JSON.stringify(err))
+              .join(", ");
+          }
+        } else if (typeof errorData === "object") {
+          errorMessage = JSON.stringify(errorData);
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setErrorMsg(errorMessage);
     }
-  }
+  };
 
   return (
-    <Card className="border-0 shadow-lg sm:border sm:shadow-sm">
-      <CardHeader className="space-y-2 text-center">
-        <div className="flex justify-center mb-4">
-          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <GraduationCap className="h-6 w-6 text-primary" />
-          </div>
-        </div>
-        <CardTitle className="text-2xl font-bold tracking-tight">Bienvenue</CardTitle>
-        <CardDescription>
-          Connectez-vous à votre compte Valiha
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="admin@valiha.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mot de passe</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Connexion en cours...
-                </>
-              ) : (
-                "Se connecter"
-              )}
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+    <div className="w-full flex items-center justify-center">
+      <div className="w-full max-w-md px-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 30 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{
+            type: "spring",
+            stiffness: 400,
+            damping: 30,
+            duration: 0.6,
+            delay: 0.1,
+          }}
+        >
+          <Card className="w-full py-10 rounded-lg backdrop-blur-sm bg-background/95">
+            <CardHeader className="text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 24,
+                  delay: 0.2,
+                }}
+              >
+                <CardTitle className="text-3xl font-bold text-primary">
+                  Bienvenue
+                </CardTitle>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 24,
+                  delay: 0.3,
+                }}
+              >
+                <CardDescription>
+                  Connectez-vous à votre compte Valiha
+                </CardDescription>
+              </motion.div>
+            </CardHeader>
+
+            <CardContent>
+              <AnimatePresence mode="wait">
+                {errorMsg && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    animate={{ opacity: 1, height: "auto", marginBottom: 16 }}
+                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 500,
+                      damping: 30,
+                    }}
+                    className="overflow-hidden"
+                  >
+                    <Alert
+                      variant="destructive"
+                      className="bg-destructive/10 border-none"
+                    >
+                      <AlertDescription>{errorMsg}</AlertDescription>
+                    </Alert>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 24,
+                    delay: 0.4,
+                  }}
+                  className="space-y-2"
+                >
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    {...register("email")}
+                    placeholder="admin@valiha.com"
+                    className={
+                      errors.email
+                        ? "border-red-500 focus-visible:ring-red-200"
+                        : ""
+                    }
+                  />
+                  {errors.email && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="text-red-500 text-xs font-medium"
+                    >
+                      {errors.email.message}
+                    </motion.p>
+                  )}
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 24,
+                    delay: 0.5,
+                  }}
+                  className="space-y-2"
+                >
+                  <Label htmlFor="password">Mot de passe</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    {...register("password")}
+                    placeholder="••••••••"
+                    className={
+                      errors.password
+                        ? "border-red-500 focus-visible:ring-red-200"
+                        : ""
+                    }
+                  />
+                  {errors.password && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="text-red-500 text-xs font-medium"
+                    >
+                      {errors.password.message}
+                    </motion.p>
+                  )}
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 24,
+                    delay: 0.6,
+                  }}
+                >
+                  <Button
+                    size="lg"
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full mt-4 relative overflow-hidden group"
+                  >
+                    <motion.span
+                      initial={{ x: "-100%" }}
+                      animate={{ x: "100%" }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 2,
+                        ease: "linear",
+                        repeatDelay: 1,
+                      }}
+                      className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent"
+                    />
+                    {isSubmitting ? (
+                      <>
+                        <Spinner className="w-4 h-4 mr-2" />
+                        Connexion...
+                      </>
+                    ) : (
+                      "Se connecter"
+                    )}
+                  </Button>
+                </motion.div>
+              </form>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+                className="mt-6 text-center text-sm text-muted-foreground"
+              >
+                Pas encore de compte ?{" "}
+                <Link
+                  href="/register"
+                  className="text-primary hover:underline font-medium"
+                >
+                  S&apos;inscrire
+                </Link>
+              </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    </div>
   );
 }

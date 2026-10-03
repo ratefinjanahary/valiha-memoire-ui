@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { memoireService } from "@/services/memoire.service";
 import { Memoire } from "@/types/memoire";
-import { MemoireCard } from "@/components/memoires/MemoireCard";
+import { MemoireCard } from "@/components/memoires/memoire-card";
 import { SubmitMemoireModal } from "@/components/memoires/SubmitMemoireModal";
 
 import { Input } from "@/components/ui/input";

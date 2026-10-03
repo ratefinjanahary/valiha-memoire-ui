@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/api-client';
+import { api } from '@/lib/api';
 
 export interface KPI {
   title: string;
@@ -17,17 +17,17 @@ export interface AuditLog {
 
 export const analyticsService = {
   getKpis: async () => {
-    const { data } = await apiClient.get('/analytics/kpis');
+    const { data } = await api.get('/analytics/kpis');
     return data;
   },
 
   getChartsData: async () => {
-    const { data } = await apiClient.get('/analytics/charts');
+    const { data } = await api.get('/analytics/charts');
     return data;
   },
 
   getAuditLogs: async (page: number = 1) => {
-    const { data } = await apiClient.get<{ data: AuditLog[], meta: any }>('/audit', { params: { page } });
+    const { data } = await api.get<{ data: AuditLog[], meta: any }>('/audit', { params: { page } });
     return data;
   }
 };

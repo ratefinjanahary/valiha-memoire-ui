@@ -11,7 +11,7 @@ interface MemoireCardProps {
 export function MemoireCard({ memoire, onClick }: MemoireCardProps) {
   return (
     <Card 
-      className="flex flex-col h-full overflow-hidden transition-all duration-300 border bg-card cursor-pointer group"
+      className="flex flex-col h-full overflow-hidden transition-all duration-300 cursor-pointer group"
       onClick={() => onClick && onClick(memoire.id)}
     >
       <CardHeader className="pb-3 border-b bg-muted/20">
