@@ -351,9 +351,6 @@ function MemoireResultCard({ memoire, index }: { memoire: Memoire; index: number
       initial={{ opacity: 0, y: 24, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{
-        type: "spring",
-        stiffness: 300,
-        damping: 26,
         delay: 0.15 + index * 0.08,
       }}
       className="group relative flex flex-col gap-3 rounded-md border px-5 py-4 transition-all duration-200 hover:border-primary/40"
@@ -375,7 +372,7 @@ function MemoireResultCard({ memoire, index }: { memoire: Memoire; index: number
         }}
         className="flex flex-wrap items-center gap-2"
       >
-        <Badge variant={degreeVariant[memoire.typeDiplome] ?? "secondary"}>
+        <Badge variant={degreeVariant[memoire.typeDiplome] ?? "secondary"} className="rounded-full h-5 w-5">
           {degreeLabel[memoire.typeDiplome] ?? memoire.typeDiplome}
         </Badge>
         <span className="text-xs text-muted-foreground">{memoire.anneeSoutenance}</span>

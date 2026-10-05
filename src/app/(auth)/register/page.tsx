@@ -57,10 +57,10 @@ export default function RegisterPage() {
   }
 
   return (
-    <Card className="border-0 shadow-lg sm:border sm:shadow-sm">
+    <Card className="border-0 ">
       <CardHeader className="space-y-2 text-center">
         <div className="flex justify-center mb-4">
-          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
             <GraduationCap className="h-6 w-6 text-primary" />
           </div>
         </div>
@@ -74,14 +74,14 @@ export default function RegisterPage() {
           <div className="grid grid-cols-2 gap-4">
             <Field>
               <FieldLabel htmlFor="nom">Nom</FieldLabel>
-              <Input id="nom" placeholder="Doe" {...form.register("nom")} />
+              <Input id="nom" placeholder="Mark" {...form.register("nom")} />
               {form.formState.errors.nom && (
                 <FieldError>{form.formState.errors.nom.message}</FieldError>
               )}
             </Field>
             <Field>
               <FieldLabel htmlFor="prenom">Prénom</FieldLabel>
-              <Input id="prenom" placeholder="John" {...form.register("prenom")} />
+              <Input id="prenom" placeholder="Kowalsky" {...form.register("prenom")} />
               {form.formState.errors.prenom && (
                 <FieldError>{form.formState.errors.prenom.message}</FieldError>
               )}
@@ -90,14 +90,14 @@ export default function RegisterPage() {
           
           <Field>
             <FieldLabel htmlFor="email">Email</FieldLabel>
-            <Input id="email" placeholder="john@example.com" {...form.register("email")} />
+            <Input id="email" placeholder="email@example.com" {...form.register("email")} />
             {form.formState.errors.email && (
               <FieldError>{form.formState.errors.email.message}</FieldError>
             )}
           </Field>
           <Field>
             <FieldLabel htmlFor="password">Mot de passe</FieldLabel>
-            <Input id="password" type="password" placeholder="••••••••" {...form.register("password")} />
+            <Input id="password" type="password" placeholder="" {...form.register("password")} />
             {form.formState.errors.password && (
               <FieldError>{form.formState.errors.password.message}</FieldError>
             )}
@@ -117,7 +117,7 @@ export default function RegisterPage() {
       <CardFooter className="flex justify-center">
         <p className="text-sm text-muted-foreground">
           Déjà un compte ?{" "}
-          <Link href="/login" className="text-primary hover:underline font-medium">
+          <Link href="/login" className="text-primary hover:underline">
             Se connecter
           </Link>
         </p>
