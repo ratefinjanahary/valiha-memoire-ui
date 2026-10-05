@@ -4,7 +4,12 @@ import { Memoire, MemoireSearchResponse, Universite, Domaine } from '@/types/mem
 export const memoireService = {
   // Recherche classique & filtres
   search: async (params: { q?: string; mode?: 'any' | 'all'; annee?: number; typeDiplome?: string; universiteId?: string; domaineId?: string; page?: number }) => {
-    const { data } = await api.get<MemoireSearchResponse>('/memoires/search', { params });
+    // Ne pas envoyer `q` si vide — le DTO backend requiert min(1) quand présent
+    const cleanParams = { ...params };
+    if (!cleanParams.q || cleanParams.q.trim() === '') {
+      delete cleanParams.q;
+    }
+    const { data } = await api.get<MemoireSearchResponse>('/memoires/search', { params: cleanParams });
     return data;
   },
 

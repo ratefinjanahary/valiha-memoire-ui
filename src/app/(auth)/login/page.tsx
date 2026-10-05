@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
+import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -27,6 +28,7 @@ export default function LoginPage() {
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -167,7 +169,7 @@ export default function LoginPage() {
                     id="email"
                     type="email"
                     {...register("email")}
-                    placeholder="admin@valiha.com"
+                    placeholder="email@example.com"
                     className={
                       errors.email
                         ? "border-red-500 focus-visible:ring-red-200"
@@ -198,17 +200,32 @@ export default function LoginPage() {
                   className="space-y-2"
                 >
                   <Label htmlFor="password">Mot de passe</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    {...register("password")}
-                    placeholder="••••••••"
-                    className={
-                      errors.password
-                        ? "border-red-500 focus-visible:ring-red-200"
-                        : ""
-                    }
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      {...register("password")}
+                      placeholder="••••••••"
+                      className={
+                        errors.password
+                          ? "border-red-500 focus-visible:ring-red-200 pr-10"
+                          : "pr-10"
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                   {errors.password && (
                     <motion.p
                       initial={{ opacity: 0, y: -10 }}

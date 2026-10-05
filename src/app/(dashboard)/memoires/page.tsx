@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Filter, Loader2, Plus } from "lucide-react";
+import { Search, Filter, Loader2, Plus, BookOpen, Calendar, GraduationCap, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { memoireService } from "@/services/memoire.service";
 import { Memoire } from "@/types/memoire";
-import { MemoireCard } from "@/components/memoires/memoire-card";
 import { SubmitMemoireModal } from "@/components/memoires/SubmitMemoireModal";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,42 +19,41 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+
+/* Page Mémoires */
 export default function MemoiresPage() {
   const [memoires, setMemoires] = useState<Memoire[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   // Pagination et filtres
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [mode, setMode] = useState<'any' | 'all'>('any');
 
-  useEffect(() => {
-    fetchMemoires();
-  }, [page, mode]); // Recharge quand la page ou le mode change
-
-  const fetchMemoires = async (query = searchQuery) => {
+  const fetchMemoires = async (query = searchQuery, currentPage = page, currentMode = mode) => {
     setIsLoading(true);
     try {
-      const response = await memoireService.search({
-        q: query,
-        mode: mode,
-        page: page,
-      });
-      setMemoires(response.data);
-      setTotalPages(response.meta.totalPages);
-    } catch (error) {
+      const response = await memoireService.search({ q: query, mode: currentMode, page: currentPage });
+      setMemoires(response.data ?? []);
+      setTotalPages(response.meta?.totalPages ?? 1);
+    } catch {
       toast.error("Erreur lors de la récupération des mémoires");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
+  /* Recharge quand la page ou le mode change */
+  useEffect(() => {
+    fetchMemoires(searchQuery, page, mode);
+  }, [page, mode]);
+
+  const handleSearch = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setPage(1); // Retour à la première page
-    fetchMemoires(searchQuery);
+    setPage(1);
+    fetchMemoires(searchQuery, 1, mode);
   };
 
   return (
@@ -61,20 +61,20 @@ export default function MemoiresPage() {
       {/* Header & Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Mémoires</h1>
-          <p className="text-muted-foreground">Consultez et recherchez parmi la base de connaissances.</p>
+          <h1 className="text-lg font-bold tracking-tight">Mémoires</h1>
+          <p className="text-muted-foreground text-sm">Consultez et recherchez parmi la base de connaissances.</p>
         </div>
-        <Button className="shrink-0" onClick={() => setIsModalOpen(true)}>
+        <Button size="lg" className="px-3" onClick={() => setIsModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Soumettre un mémoire
         </Button>
       </div>
 
       {/* Barre de Recherche et Filtres */}
-      <div className="bg-card border rounded-lg p-4 shadow-sm">
+      <div className="border rounded-sm p-5">
         <form onSubmit={handleSearch} className="flex gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Rechercher par mots-clés (ex: intelligence artificielle)..."
@@ -83,13 +83,13 @@ export default function MemoiresPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          
+
           <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Button variant="outline" className="shrink-0">
-                <Filter className="mr-2 h-4 w-4" />
-                {mode === 'any' ? "Contient un des mots" : "Contient tous les mots"}
-              </Button>
+            <DropdownMenuTrigger
+              render={<Button variant="outline" className="shrink-0" type="button" />}
+            >
+              <Filter className="mr-2 h-4 w-4" />
+              {mode === 'any' ? "Contient un des mots" : "Contient tous les mots"}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setMode('any')}>
@@ -113,27 +113,83 @@ export default function MemoiresPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : memoires.length === 0 ? (
-        <div className="text-center py-24 border rounded-xl bg-card/50 border-dashed">
+        <div className="text-center py-24 border rounded-md">
           <p className="text-muted-foreground">Aucun mémoire trouvé correspondant à vos critères.</p>
         </div>
       ) : (
         <>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {memoires.map((memoire) => (
-              <MemoireCard 
-                key={memoire.id} 
-                memoire={memoire} 
-                onClick={(id) => toast.info(`Détails du mémoire ${id} à implémenter`)}
-              />
+              <Card key={memoire.id} className="flex flex-col h-full overflow-hidden transition-all duration-300 cursor-pointer group">
+                <CardHeader className="pb-3 border-b bg-muted/20">
+                  <div className="flex justify-between items-start gap-2 mb-2">
+                    <Badge variant="secondary" className="font-medium bg-primary/10 text-primary hover:bg-primary/20">
+                      {memoire.typeDiplome}
+                    </Badge>
+                    <div className="flex items-center text-xs text-muted-foreground">
+                      <Calendar className="w-3 h-3 mr-1" />
+                      {memoire.anneeSoutenance}
+                    </div>
+                  </div>
+                  <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">
+                    {memoire.titre}
+                  </h3>
+                  <div className="text-sm text-muted-foreground flex items-center mt-1">
+                    <GraduationCap className="w-4 h-4 mr-2" />
+                    {memoire.auteurPrenom} {memoire.auteurNom}
+                  </div>
+                </CardHeader>
+
+                <CardContent className="py-4 flex-1">
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {memoire.resume || "Aucun résumé disponible."}
+                  </p>
+                </CardContent>
+
+                <CardFooter className="pt-0 pb-4 flex flex-col items-start gap-3">
+                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    {memoire.universite && (
+                      <div className="flex items-center bg-muted px-2 py-1 rounded-md">
+                        <Building2 className="w-3 h-3 mr-1" />
+                        <span className="truncate max-w-30" title={memoire.universite.nom}>
+                          {memoire.universite.sigle || memoire.universite.nom}
+                        </span>
+                      </div>
+                    )}
+                    {memoire.domaine && (
+                      <div className="flex items-center bg-muted px-2 py-1 rounded-md">
+                        <BookOpen className="w-3 h-3 mr-1" />
+                        <span className="truncate max-w-30" title={memoire.domaine.nom}>
+                          {memoire.domaine.nom}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {memoire.motsCles && memoire.motsCles.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {memoire.motsCles.slice(0, 3).map((mc, idx) => (
+                        <Badge key={idx} variant="outline" className="text-[10px] font-normal border-muted-foreground/20">
+                          {mc.motCle.libelle}
+                        </Badge>
+                      ))}
+                      {memoire.motsCles.length > 3 && (
+                        <Badge variant="outline" className="text-[10px] font-normal border-muted-foreground/20">
+                          +{memoire.motsCles.length - 3}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </CardFooter>
+              </Card>
             ))}
           </div>
 
-          {/* Pagination simple */}
+          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center gap-2 mt-8">
-              <Button 
-                variant="outline" 
-                onClick={() => setPage(p => Math.max(1, p - 1))}
+              <Button
+                variant="outline"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1 || isLoading}
               >
                 Précédent
@@ -141,9 +197,9 @@ export default function MemoiresPage() {
               <div className="flex items-center px-4 text-sm font-medium">
                 Page {page} sur {totalPages}
               </div>
-              <Button 
-                variant="outline" 
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              <Button
+                variant="outline"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages || isLoading}
               >
                 Suivant
@@ -154,10 +210,14 @@ export default function MemoiresPage() {
       )}
 
       {/* Modal de Soumission */}
-      <SubmitMemoireModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onSuccess={fetchMemoires} 
+      <SubmitMemoireModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => {
+          setSearchQuery("");
+          setPage(1);
+          fetchMemoires("", 1, mode);
+        }}
       />
     </div>
   );

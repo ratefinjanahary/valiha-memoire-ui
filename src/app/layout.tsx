@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const chillax = localFont({
-  src: "../../public/fonts/Chillax-Variable.woff2",
-  variable: "--font-chillax",
+const quicksand = localFont({
+  src: "../../public/fonts/Quicksand-Variable.woff2",
+  variable: "--font-quicksand",
   display: "swap",
 });
 
@@ -30,9 +30,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${chillax.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${quicksand.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="font-chillax min-h-full flex flex-col">
+      <body className="font-quicksand font-semibold min-h-full flex flex-col">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import HeroPage from "./(landing)/page";
 
 export default function Home() {
-  redirect("/dashboard");
+  return <HeroPage />;
 }
