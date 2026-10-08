@@ -1,5 +1,5 @@
 import { api } from '@/lib/api';
-import { Memoire, MemoireSearchResponse, Universite, Domaine } from '@/types/memoire';
+import { Memoire, MemoireSearchResponse, Universite, Domaine, TopMemoire } from '@/types/memoire';
 
 export const memoireService = {
   
@@ -34,8 +34,8 @@ export const memoireService = {
     return data;
   },
 
-  getTop: async (limit: number = 10) => {
-    const { data } = await api.get<Memoire[]>(`/memoires/top`, { params: { limit } });
+  getTop: async (limit: number = 50) => {
+    const { data } = await api.get<TopMemoire[]>(`/memoires/top`, { params: { limit } });
     return data;
   },
 

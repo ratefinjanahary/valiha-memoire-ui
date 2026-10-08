@@ -17,6 +17,9 @@ import {
 import { XCircle, LucideIcon, BookCheck, BookAlert, BookSearch } from "lucide-react";
 
 import { analyticsService } from "@/services/analytics.service";
+import { memoireService } from "@/services/memoire.service";
+import { TopMemoire } from "@/types/memoire";
+import { TopMemoiresTreemap } from "@/components/dashboard/top-memoires-treemap";
 
 import {
   Card,
@@ -97,18 +100,23 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [kpis, setKpis] = useState<Kpis | null>(null);
   const [charts, setCharts] = useState<ChartsData | null>(null);
+  const [topMemoires, setTopMemoires] = useState<TopMemoire[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        const [kpiData, chartData] = await Promise.all([
+        const [kpiData, chartData, topData] = await Promise.all([
           analyticsService.getKpis(),
           analyticsService.getChartsData(),
+          memoireService.getTop(50),
         ]);
         setKpis(kpiData);
         setCharts(chartData);
+        setTopMemoires(topData);
       } catch (error) {
         console.error("Erreur chargement analytics", error);
+        setError("Erreur lors du chargement des données.");
       } finally {
         setIsLoading(false);
       }
@@ -208,7 +216,7 @@ export default function DashboardPage() {
                         borderRadius: "8px",
                         border: "1px solid #eee",
                       }}
-                      formatter={(value: number) => [value, "Mémoires"]}
+                      formatter={(value: any) => [value, "Mémoires"]}
                     />
                     <Bar
                       dataKey="count"
@@ -225,7 +233,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Pie Chart — Répartition par université */}
-        <Card className="col-span-3 border-muted">
+        <Card className="col-span-3 border-muted sm:col-span-4 md:col-span-3">
           <CardHeader>
             <CardTitle>Répartition par Université</CardTitle>
             <CardDescription>
@@ -266,13 +274,38 @@ export default function DashboardPage() {
                         borderRadius: "8px",
                         border: "1px solid #eee",
                       }}
-                      formatter={(value: number, name: string) => [
+                      formatter={(value: any, name: any) => [
                         value,
                         name,
                       ]}
                     />
                   </PieChart>
                 </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Treemap — Popularité par domaine */}
+        <Card className="col-span-4 border-muted">
+          <CardHeader>
+            <CardTitle>Popularité par Domaine</CardTitle>
+            <CardDescription>
+              Regroupement des mémoires les plus consultés par domaine.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {error ? (
+              <div className="flex h-[400px] items-center justify-center text-sm text-destructive border border-dashed border-destructive/50 rounded-lg bg-destructive/10">
+                {error}
+              </div>
+            ) : topMemoires.length === 0 ? (
+              <div className="flex h-[400px] items-center justify-center text-sm text-muted-foreground border border-dashed rounded-lg bg-muted/20">
+                Aucune donnée disponible
+              </div>
+            ) : (
+              <div className="h-[400px] w-full mt-4">
+                <TopMemoiresTreemap data={topMemoires} />
               </div>
             )}
           </CardContent>

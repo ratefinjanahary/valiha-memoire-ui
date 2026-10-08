@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { searchService, TrendingKeyword } from "@/services/search.service";
 import { Memoire } from "@/types/memoire";
+import { MemoireDetailModal } from "@/components/memoires/memoire-detail-modal";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,9 @@ export default function SemanticSearchPage() {
 
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+
+  const [selectedMemoireId, setSelectedMemoireId] = useState<string | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   useEffect(() => {
     const loadTrending = async () => {
@@ -331,13 +335,33 @@ export default function SemanticSearchPage() {
               </motion.h2>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {results.map((memoire, index) => (
-                  <MemoireResultCard key={memoire.id} memoire={memoire} index={index} />
+                  <MemoireResultCard 
+                    key={memoire.id} 
+                    memoire={memoire} 
+                    index={index} 
+                    onClick={() => {
+                      setSelectedMemoireId(memoire.id);
+                      setIsDetailOpen(true);
+                    }}
+                  />
                 ))}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+
+      <MemoireDetailModal
+        memoireId={selectedMemoireId}
+        isOpen={isDetailOpen}
+        onClose={() => {
+          setIsDetailOpen(false);
+          setSelectedMemoireId(null);
+        }}
+        onSelectSimilar={(id) => {
+          setSelectedMemoireId(id);
+        }}
+      />
     </div>
   );
 }
@@ -356,7 +380,7 @@ const degreeLabel: Record<string, string> = {
   DOCTORAT: "Doctorat",
 };
 
-function MemoireResultCard({ memoire, index }: { memoire: Memoire; index: number }) {
+function MemoireResultCard({ memoire, index, onClick }: { memoire: Memoire; index: number; onClick: () => void }) {
   const relevancePercent =
     memoire.jaccardScore != null ? Math.round(memoire.jaccardScore * 100) : null;
 
@@ -367,7 +391,8 @@ function MemoireResultCard({ memoire, index }: { memoire: Memoire; index: number
       transition={{
         delay: 0.15 + index * 0.08,
       }}
-      className="group relative flex flex-col gap-3 rounded-md border px-5 py-4 transition-all duration-200 hover:border-primary/40"
+      onClick={onClick}
+      className="group relative flex flex-col gap-3 rounded-md border px-5 py-4 transition-all duration-200 hover:border-primary/40 cursor-pointer"
     >
       {/* Numero de rang */}
       <span className="absolute top-4 right-4 text-xs font-mono text-muted-foreground/40 select-none">

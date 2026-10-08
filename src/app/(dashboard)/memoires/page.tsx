@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { memoireService } from "@/services/memoire.service";
 import { Memoire } from "@/types/memoire";
 import { SubmitMemoireModal } from "@/components/memoires/submit-memoire-modal";
+import { MemoireDetailModal } from "@/components/memoires/memoire-detail-modal";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,8 @@ export default function MemoiresPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMemoireId, setSelectedMemoireId] = useState<string | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -122,7 +125,14 @@ export default function MemoiresPage() {
         <>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
             {memoires.map((memoire) => (
-              <Card key={memoire.id} className="flex flex-col h-full overflow-hidden transition-all duration-300 cursor-pointer group">
+              <Card 
+                key={memoire.id} 
+                className="flex flex-col h-full overflow-hidden transition-all duration-300 cursor-pointer group"
+                onClick={() => {
+                  setSelectedMemoireId(memoire.id);
+                  setIsDetailOpen(true);
+                }}
+              >
                 <CardHeader className="pb-3 border-b">
                   <div className="flex justify-between items-start gap-2 mb-2">
                     <Badge variant="secondary" className="font-semibold lowercase bg-primary/10 text-primary hover:bg-primary/20">
@@ -219,6 +229,19 @@ export default function MemoiresPage() {
           setSearchQuery("");
           setPage(1);
           fetchMemoires("", 1, mode);
+        }}
+      />
+
+      {/* Modal de Détails / Consultation */}
+      <MemoireDetailModal
+        memoireId={selectedMemoireId}
+        isOpen={isDetailOpen}
+        onClose={() => {
+          setIsDetailOpen(false);
+          setSelectedMemoireId(null);
+        }}
+        onSelectSimilar={(id) => {
+          setSelectedMemoireId(id);
         }}
       />
     </div>
