@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Filter, Loader2, Plus, BookOpen, Calendar, GraduationCap, Building2 } from "lucide-react";
+import { 
+  Search, ListCheck, Loader2, Plus, 
+  BookOpen, Calendar, GraduationCap, Building2 
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { memoireService } from "@/services/memoire.service";
 import { Memoire } from "@/types/memoire";
-import { SubmitMemoireModal } from "@/components/memoires/SubmitMemoireModal";
+import { SubmitMemoireModal } from "@/components/memoires/submit-memoire-modal";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,14 +23,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 
-/* Page Mémoires */
 export default function MemoiresPage() {
   const [memoires, setMemoires] = useState<Memoire[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Pagination et filtres
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [mode, setMode] = useState<'any' | 'all'>('any');
@@ -38,14 +39,14 @@ export default function MemoiresPage() {
       const response = await memoireService.search({ q: query, mode: currentMode, page: currentPage });
       setMemoires(response.data ?? []);
       setTotalPages(response.meta?.totalPages ?? 1);
-    } catch {
+    } catch (err) {
+      console.error("search memoires:", err);
       toast.error("Erreur lors de la récupération des mémoires");
     } finally {
       setIsLoading(false);
     }
   };
 
-  /* Recharge quand la page ou le mode change */
   useEffect(() => {
     fetchMemoires(searchQuery, page, mode);
   }, [page, mode]);
@@ -74,11 +75,11 @@ export default function MemoiresPage() {
       <div className="border rounded-sm p-5">
         <form onSubmit={handleSearch} className="flex gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Rechercher par mots-clés (ex: intelligence artificielle)..."
-              className="pl-9 w-full"
+              className="pl-9 py-4.5 w-full"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -86,9 +87,10 @@ export default function MemoiresPage() {
 
           <DropdownMenu>
             <DropdownMenuTrigger
+              className="py-4.5"
               render={<Button variant="outline" className="shrink-0" type="button" />}
             >
-              <Filter className="mr-2 h-4 w-4" />
+              <ListCheck className="mr-2 h-4 w-4" />
               {mode === 'any' ? "Contient un des mots" : "Contient tous les mots"}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -101,7 +103,7 @@ export default function MemoiresPage() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" size="lg" disabled={isLoading} className="px-5">
             Rechercher
           </Button>
         </form>
@@ -118,12 +120,12 @@ export default function MemoiresPage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
             {memoires.map((memoire) => (
               <Card key={memoire.id} className="flex flex-col h-full overflow-hidden transition-all duration-300 cursor-pointer group">
-                <CardHeader className="pb-3 border-b bg-muted/20">
+                <CardHeader className="pb-3 border-b">
                   <div className="flex justify-between items-start gap-2 mb-2">
-                    <Badge variant="secondary" className="font-medium bg-primary/10 text-primary hover:bg-primary/20">
+                    <Badge variant="secondary" className="font-semibold lowercase bg-primary/10 text-primary hover:bg-primary/20">
                       {memoire.typeDiplome}
                     </Badge>
                     <div className="flex items-center text-xs text-muted-foreground">
@@ -169,7 +171,7 @@ export default function MemoiresPage() {
                     <div className="flex flex-wrap gap-1 mt-1">
                       {memoire.motsCles.slice(0, 3).map((mc, idx) => (
                         <Badge key={idx} variant="outline" className="text-[10px] font-normal border-muted-foreground/20">
-                          {mc.motCle.libelle}
+                          {mc.motCle?.libelle}
                         </Badge>
                       ))}
                       {memoire.motsCles.length > 3 && (
@@ -194,7 +196,7 @@ export default function MemoiresPage() {
               >
                 Précédent
               </Button>
-              <div className="flex items-center px-4 text-sm font-medium">
+              <div className="flex items-center px-4 text-sm">
                 Page {page} sur {totalPages}
               </div>
               <Button

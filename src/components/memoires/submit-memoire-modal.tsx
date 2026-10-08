@@ -124,7 +124,7 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-150 max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b bg-muted/30">
-          <DialogTitle className="flex items-center text-xl">
+          <DialogTitle className="flex items-center text-xl font-semibold">
             <UploadCloud className="mr-2 h-5 w-5 text-primary" />
             Soumettre un mémoire
           </DialogTitle>
@@ -133,7 +133,7 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 p-6">
+        <div className="flex-1 min-h-0 overflow-y-auto p-6">
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pr-4">
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -217,7 +217,7 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
                   <Input 
                     type="file" 
                     accept="application/pdf"
-                    className="file:text-primary file:bg-primary/10 file:px-4 file:py-1 file:rounded-md file:border-0 file:mr-4 file:font-medium hover:file:bg-primary/20 cursor-pointer h-12"
+                    className="file:text-primary file:bg-primary/10 file:px-4 file:rounded-sm file:border-0 file:mr-4 hover:file:bg-primary/20 cursor-pointer h-9"
                     onChange={(event) => onChange(event.target.files)}
                     {...fieldProps} 
                   />
@@ -227,7 +227,7 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
             )} />
 
             <div className="flex justify-end gap-3 pt-6 pb-2">
-              <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
                 Annuler
               </Button>
               <Button type="submit" disabled={isSubmitting}>
@@ -236,7 +236,7 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
               </Button>
             </div>
           </form>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

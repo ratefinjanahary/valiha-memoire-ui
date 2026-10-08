@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutDashboard, BookOpen, Search, GraduationCap, LogOut, User, AlertTriangle } from "lucide-react";
+import { LayoutDashboard, BookOpen, Search, GraduationCap, LogOut, User, AlertTriangle, BookCheck } from "lucide-react";
 import { useUiStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { cn } from "@/lib/utils";
@@ -27,8 +27,18 @@ import {
 } from "@/components/ui/dialog";
 import { useState } from "react";
 
-const navLinks = [
+import { ShieldCheck, type LucideIcon } from "lucide-react";
+
+interface NavLink {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  roles?: string[];
+}
+
+const navLinks: NavLink[] = [
   { name: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Modération", href: "/moderation", icon: BookCheck, roles: ["ADMIN", "DOCUMENTALISTE"] },
   { name: "Mémoires", href: "/memoires", icon: BookOpen },
   { name: "Recherche", href: "/search", icon: Search },
 ];
@@ -64,16 +74,18 @@ export const Sidebar: React.FC = () => {
           </DialogHeader>
           <DialogFooter>
             <Button
+              size="lg"
               variant="outline"
               onClick={() => setShowLogoutDialog(false)}
             >
               Annuler
             </Button>
             <Button
+              size="lg"
               variant="destructive"
               onClick={handleLogoutConfirm}
             >
-              <LogOut className="h-4 w-4 mr-2" />
+              <LogOut className="h-4 w-4 mr" />
               Se déconnecter
             </Button>
           </DialogFooter>
@@ -97,26 +109,28 @@ export const Sidebar: React.FC = () => {
 
             {/* Navigation Links */}
             <nav className="flex-1 py-5 px-3 space-y-2 overflow-y-auto">
-              {navLinks.map((link) => {
-                const isActive = pathname.startsWith(link.href);
-                const Icon = link.icon;
+              {navLinks
+                .filter((link) => !link.roles || (user?.role && link.roles.includes(user.role)))
+                .map((link) => {
+                  const isActive = pathname.startsWith(link.href);
+                  const Icon = link.icon;
 
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={cn(
-                      "flex items-center px-3 py-1.5 rounded-sm transition-colors font-semibold text-[15px]",
-                      isActive
-                        ? "bg-primary/7 text-primary"
-                        : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
-                    )}
-                  >
-                    <Icon className="h-5 w-5 mr-3 shrink-0" />
-                    <span>{link.name}</span>
-                  </Link>
-                );
-              })}
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        "flex items-center px-3 py-1.5 rounded-sm transition-colors font-semibold text-[15px]",
+                        isActive
+                          ? "bg-primary/7 text-primary"
+                          : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
+                      )}
+                    >
+                      <Icon className="h-5 w-5 mr-3 shrink-0" />
+                      <span>{link.name}</span>
+                    </Link>
+                  );
+                })}
             </nav>
 
             {/* Bottom: Theme + Profile */}

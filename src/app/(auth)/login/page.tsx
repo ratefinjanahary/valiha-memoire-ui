@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "motion/react";
 
 const loginSchema = z.object({
   email: z.string().min(1, "L'email est requis").email("Email invalide"),
@@ -23,6 +23,32 @@ const loginSchema = z.object({
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
+
+// Variants du conteneur principal (carte)
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 40, scale: 0.96 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.5,
+      ease: [0.22, 1, 0.36, 1],
+      when: "beforeChildren",
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+// Variants pour chaque élément enfant (header, champs, footer...)
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
+  },
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -57,9 +83,7 @@ export default function LoginPage() {
         const errorData = error.response.data;
 
         if (Array.isArray(errorData)) {
-          errorMessage = errorData
-            .map((err) => err.msg || JSON.stringify(err))
-            .join(", ");
+          errorMessage = errorData.map((err) => err.msg || JSON.stringify(err)).join(", ");
         } else if (typeof errorData === "string") {
           errorMessage = errorData;
         } else if (errorData.detail) {
@@ -85,43 +109,18 @@ export default function LoginPage() {
     <div className="w-full flex items-center justify-center">
       <div className="w-full max-w-md px-4">
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 30 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{
-            type: "spring",
-            stiffness: 400,
-            damping: 30,
-            duration: 0.6,
-            delay: 0.1,
-          }}
+          initial="hidden"
+          animate="visible"
+          variants={cardVariants}
         >
-          <Card className="w-full py-10 rounded-lg backdrop-blur-sm bg-background/95">
+          <Card className="w-full py-10 rounded-lg backdrop-blur-sm bg-background/10">
             <CardHeader className="text-center">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 300,
-                  damping: 24,
-                  delay: 0.2,
-                }}
-              >
+              <motion.div variants={itemVariants}>
                 <CardTitle className="text-3xl font-bold text-primary">
                   Bienvenue
                 </CardTitle>
               </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 300,
-                  damping: 24,
-                  delay: 0.3,
-                }}
-              >
+              <motion.div variants={itemVariants}>
                 <CardDescription>
                   Connectez-vous à votre compte Valiha
                 </CardDescription>
@@ -135,17 +134,10 @@ export default function LoginPage() {
                     initial={{ opacity: 0, height: 0, marginBottom: 0 }}
                     animate={{ opacity: 1, height: "auto", marginBottom: 16 }}
                     exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 500,
-                      damping: 30,
-                    }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     className="overflow-hidden"
                   >
-                    <Alert
-                      variant="destructive"
-                      className="bg-destructive/10 border-none"
-                    >
+                    <Alert variant="destructive" className="bg-destructive/10 border-none">
                       <AlertDescription>{errorMsg}</AlertDescription>
                     </Alert>
                   </motion.div>
@@ -153,28 +145,14 @@ export default function LoginPage() {
               </AnimatePresence>
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 24,
-                    delay: 0.4,
-                  }}
-                  className="space-y-2"
-                >
+                <motion.div variants={itemVariants} className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
                     type="email"
                     {...register("email")}
                     placeholder="email@example.com"
-                    className={
-                      errors.email
-                        ? "border-red-500 focus-visible:ring-red-200"
-                        : ""
-                    }
+                    className={errors.email ? "border-red-500 focus-visible:ring-red-200" : ""}
                   />
                   {errors.email && (
                     <motion.p
@@ -188,24 +166,13 @@ export default function LoginPage() {
                   )}
                 </motion.div>
 
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 24,
-                    delay: 0.5,
-                  }}
-                  className="space-y-2"
-                >
+                <motion.div variants={itemVariants} className="space-y-2">
                   <Label htmlFor="password">Mot de passe</Label>
                   <div className="relative">
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
                       {...register("password")}
-                      placeholder="••••••••"
                       className={
                         errors.password
                           ? "border-red-500 focus-visible:ring-red-200 pr-10"
@@ -219,11 +186,7 @@ export default function LoginPage() {
                       aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                       tabIndex={-1}
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                   {errors.password && (
@@ -239,14 +202,8 @@ export default function LoginPage() {
                 </motion.div>
 
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 24,
-                    delay: 0.6,
-                  }}
+                  variants={itemVariants}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
                 >
                   <Button
                     size="lg"
@@ -278,16 +235,11 @@ export default function LoginPage() {
               </form>
 
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.7 }}
+                variants={itemVariants}
                 className="mt-6 text-center text-sm text-muted-foreground"
               >
                 Pas encore de compte ?{" "}
-                <Link
-                  href="/register"
-                  className="text-primary hover:underline font-medium"
-                >
+                <Link href="/register" className="text-primary hover:underline font-semibold">
                   S&apos;inscrire
                 </Link>
               </motion.div>

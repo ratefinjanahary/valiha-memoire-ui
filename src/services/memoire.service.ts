@@ -2,9 +2,9 @@ import { api } from '@/lib/api';
 import { Memoire, MemoireSearchResponse, Universite, Domaine } from '@/types/memoire';
 
 export const memoireService = {
-  // Recherche classique & filtres
+  
   search: async (params: { q?: string; mode?: 'any' | 'all'; annee?: number; typeDiplome?: string; universiteId?: string; domaineId?: string; page?: number }) => {
-    // Ne pas envoyer `q` si vide — le DTO backend requiert min(1) quand présent
+    // Ne pas envoyer `q` si vide
     const cleanParams = { ...params };
     if (!cleanParams.q || cleanParams.q.trim() === '') {
       delete cleanParams.q;
@@ -13,7 +13,6 @@ export const memoireService = {
     return data;
   },
 
-  // Récupérer un mémoire spécifique
   getById: async (id: string) => {
     const { data } = await api.get<Memoire>(`/memoires/${id}`);
     return data;
@@ -35,9 +34,20 @@ export const memoireService = {
     return data;
   },
 
-  // Top Consultés
   getTop: async (limit: number = 10) => {
     const { data } = await api.get<Memoire[]>(`/memoires/top`, { params: { limit } });
+    return data;
+  },
+
+  // Récupérer les mémoires en attente de modération (pour les modérateurs)
+  getPending: async (page: number = 1) => {
+    const { data } = await api.get<{ data: Memoire[]; meta: any }>('/moderation/pending', { params: { page } });
+    return data;
+  },
+
+  // Mettre à jour le statut d'un mémoire (valider ou rejeter)
+  updateStatus: async (id: string, statut: 'VALIDE' | 'REJETTE', motifRejet?: string) => {
+    const { data } = await api.patch(`/moderation/${id}/status`, { statut, motifRejet });
     return data;
   },
   

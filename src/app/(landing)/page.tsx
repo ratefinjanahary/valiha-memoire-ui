@@ -8,6 +8,7 @@ import { GraduationCap, BookOpen, Search, Shield, ArrowRight, Sparkles } from "l
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/authStore";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { MistBackground } from "@/components/mist-background";
 
 const features = [
   {
@@ -35,18 +36,6 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { 
-    opacity: 1, 
-    y: 0, 
-    transition: { 
-      type: "spring", 
-      stiffness: 300, damping: 25 
-    } 
-  },
-};
-
 export default function HeroPage() {
   const router = useRouter();
   const { isAuthenticated, _hasHydrated } = useAuthStore();
@@ -59,7 +48,7 @@ export default function HeroPage() {
   }, [_hasHydrated, isAuthenticated, router]);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background flex flex-col">
+    <div className="relative isolate min-h-screen overflow-hidden bg-background flex flex-col">
       {/* Animated gradient background */}
       <div
         aria-hidden
@@ -69,6 +58,9 @@ export default function HeroPage() {
         <div className="absolute top-1/3 -right-32 w-[500px] h-[500px] rounded-full bg-indigo-500/8 blur-[100px] animate-pulse delay-700" />
         <div className="absolute bottom-0 left-1/3 w-[400px] h-[400px] rounded-full bg-violet-500/8 blur-[100px] animate-pulse delay-1000" />
       </div>
+
+      {/* Brume */}
+      <MistBackground />
 
       {/* Navbar */}
       <header className="w-full border-b border-border/50 backdrop-blur-sm bg-background/60 sticky top-0 z-20">

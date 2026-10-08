@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles, TrendingUp, Search, Loader2, WandSparkles } from "lucide-react";
+import { Sparkles, TrendingUp, Search, WandSparkles } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -10,8 +10,8 @@ import { Memoire } from "@/types/memoire";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ResultSkeletonCard, SemanticLoader } from "@/components/memoires/semantic-loader";
 
 export default function SemanticSearchPage() {
   const [query, setQuery] = useState("");
@@ -65,24 +65,27 @@ export default function SemanticSearchPage() {
           damping: 28,
           delay: 0.05,
         }}
-        className="relative overflow-hidden text-center py-8 px-4 rounded-lg bg-linear-to-b from-primary/5 to-background border"
+        className="relative text-center py-8 px-4 rounded-lg"
       >
-        {/* Brouillard animé */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden opacity-50">
+        {/* Brume centrée sur icône / titre / description */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-6 left-1/2 h-56 w-full max-w-xl -translate-x-1/2 opacity-75"
+        >
           <motion.div
-            className="absolute -top-20 -left-20 h-80 w-80 rounded-full bg-primary/20 blur-3xl"
-            animate={{ x: [0, 260, 90, 0], y: [0, 50, 110, 0], scale: [1, 1.3, 0.9, 1] }}
-            transition={{ duration: 24, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute left-[8%] top-2 h-44 w-44 rounded-full bg-primary/25 blur-3xl transform-gpu"
+            animate={{ x: [0, 40, 15, 0], y: [0, 15, 30, 0], scale: [1, 1.15, 0.95, 1] }}
+            transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
           />
           <motion.div
-            className="absolute top-10 right-0 h-96 w-96 rounded-full bg-[oklch(0.5106_0.2301_330)]/15 blur-3xl"
-            animate={{ x: [0, -220, -60, 0], y: [0, 80, -30, 0], scale: [1, 0.85, 1.25, 1] }}
-            transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute right-[8%] top-0 h-48 w-48 rounded-full bg-[oklch(0.5106_0.2301_330)]/20 blur-3xl transform-gpu"
+            animate={{ x: [0, -35, -10, 0], y: [0, 20, -10, 0], scale: [1, 0.9, 1.15, 1] }}
+            transition={{ duration: 17, repeat: Infinity, ease: "easeInOut" }}
           />
           <motion.div
-            className="absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-primary/10 blur-3xl"
-            animate={{ x: [0, 180, -120, 0], y: [0, -60, 20, 0], scale: [1, 1.2, 1, 1] }}
-            transition={{ duration: 28, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute left-1/2 bottom-0 -ml-20 h-36 w-40 rounded-full bg-primary/15 blur-3xl transform-gpu"
+            animate={{ x: [0, 30, -30, 0], y: [0, -15, 10, 0], scale: [1, 1.2, 1, 1] }}
+            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
           />
         </div>
 
@@ -167,7 +170,14 @@ export default function SemanticSearchPage() {
                 }}
                 className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent"
               />
-              {isSearching ? <Loader2 className="h-5 w-5 animate-spin" /> : "Rechercher"}
+              {isSearching ? (
+                <span className="relative flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 animate-pulse" />
+                  Analyse...
+                </span>
+              ) : (
+                "Rechercher"
+              )}
             </Button>
           </motion.form>
         </div>
@@ -270,14 +280,18 @@ export default function SemanticSearchPage() {
           ) : isSearching ? (
             <motion.div
               key="loading"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ type: "spring", stiffness: 300, damping: 26 }}
-              className="h-full flex flex-col items-center justify-center py-24"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-8"
             >
-              <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-              <p className="text-muted-foreground animate-pulse">Analyse vectorielle en cours...</p>
+              <SemanticLoader />
+              <div aria-hidden className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <ResultSkeletonCard key={i} index={i} />
+                ))}
+              </div>
             </motion.div>
           ) : results.length === 0 ? (
             <motion.div
@@ -315,7 +329,7 @@ export default function SemanticSearchPage() {
                 </Badge>
                 Les plus pertinents selon l&apos;IA
               </motion.h2>
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {results.map((memoire, index) => (
                   <MemoireResultCard key={memoire.id} memoire={memoire} index={index} />
                 ))}
@@ -370,9 +384,9 @@ function MemoireResultCard({ memoire, index }: { memoire: Memoire; index: number
           damping: 24,
           delay: 0.2 + index * 0.08,
         }}
-        className="flex flex-wrap items-center gap-2"
+        className="flex flex-wrap items-center gap-2 pr-8"
       >
-        <Badge variant={degreeVariant[memoire.typeDiplome] ?? "secondary"} className="rounded-full h-5 w-5">
+        <Badge variant={degreeVariant[memoire.typeDiplome] ?? "secondary"} className="rounded-full">
           {degreeLabel[memoire.typeDiplome] ?? memoire.typeDiplome}
         </Badge>
         <span className="text-xs text-muted-foreground">{memoire.anneeSoutenance}</span>

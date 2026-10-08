@@ -1,6 +1,6 @@
-import { Sidebar } from "@/components/layout/Sidebar";
-import { Header } from "@/components/layout/Header";
-import { AuthGuard } from "@/components/layout/AuthGuard";
+import { Sidebar } from "@/components/layout/sidebar";
+import { Header } from "@/components/layout/header";
+import { AuthGuard } from "@/components/layout/auth-guard";
 
 export default function DashboardLayout({
   children,
