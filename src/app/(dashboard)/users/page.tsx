@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import {
   Loader2, Search, Trash2, Shield, UserStar,
   ChevronLeft, ChevronRight, AlertTriangle, Mail, Calendar,
-  ShieldCheck, Library, GraduationCap, Globe, CircleCheck, CircleX,
+  Library, GraduationCap, Globe, CircleCheck, CircleX,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, type Variants } from "motion/react";
 import { toast } from "sonner";
 
 import { authService } from "@/services/auth.service";
@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/select";
 
 /* Variants Motion pour l'animation d'entrée progressive */
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -50,7 +50,7 @@ const containerVariants = {
   },
 };
 
-const cardVariants = {
+const cardVariants: Variants = {
   hidden: { opacity: 0, y: 20, scale: 0.97 },
   visible: {
     opacity: 1,
@@ -276,19 +276,15 @@ export default function UsersManagementPage() {
                       </Badge>
 
                       {u.isActif !== false ? (
-                        <Badge
-                          variant="outline"
-                        >
-                          <CircleCheck className="h-3 w-3" />
-                          Actif
+                        <Badge variant="outline">
+                          <CircleCheck className="h-3 w-3" />Actif
                         </Badge>
                       ) : (
                         <Badge
                           className="gap-1 bg-destructive/10 text-destructive hover:bg-destructive/10 border-destructive/20"
                           variant="outline"
                         >
-                          <CircleX className="h-3 w-3" />
-                          Inactif
+                          <CircleX className="h-3 w-3" />Inactif
                         </Badge>
                       )}
                     </div>

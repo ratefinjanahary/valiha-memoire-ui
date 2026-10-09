@@ -11,9 +11,10 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell,
+  Sector,
   Legend,
 } from "recharts";
+import type { PieSectorShapeProps } from "recharts";
 import { XCircle, LucideIcon, BookCheck, BookAlert, BookSearch } from "lucide-react";
 
 import { analyticsService } from "@/services/analytics.service";
@@ -61,6 +62,13 @@ const pieColors = [
   "#8b5cf6",
   "#14b8a6",
 ];
+
+const MyCustomPie = (props: PieSectorShapeProps) => (
+  <Sector
+    {...props}
+    fill={pieColors[props.index % pieColors.length]}
+  />
+);
 
 const kpiConfig: {
   key: keyof Kpis;
@@ -191,25 +199,9 @@ export default function DashboardPage() {
               <div className="h-64 w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={evolutionData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      opacity={0.3}
-                    />
-                    <XAxis
-                      dataKey="name"
-                      stroke="#888888"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="#888888"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                      allowDecimals={false}
-                    />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                    <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
                     <RechartsTooltip
                       cursor={{ fill: "rgba(0,0,0,0.05)" }}
                       contentStyle={{
@@ -218,13 +210,7 @@ export default function DashboardPage() {
                       }}
                       formatter={(value: any) => [value, "Mémoires"]}
                     />
-                    <Bar
-                      dataKey="count"
-                      name="Mémoires"
-                      fill="var(--color-primary)"
-                      radius={[4, 4, 0, 0]}
-                      className="fill-primary"
-                    />
+                    <Bar dataKey="count" name="Mémoires" fill="var(--color-primary)" radius={[4, 4, 0, 0]} className="fill-primary" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -256,17 +242,26 @@ export default function DashboardPage() {
                       cx="50%"
                       cy="50%"
                       outerRadius={80}
-                    >
-                      {repartitionData.map((_, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={pieColors[index % pieColors.length]}
-                        />
-                      ))}
-                    </Pie>
+                      shape={MyCustomPie}
+                    />
                     <Legend
-                      formatter={(value) => (
-                        <span className="text-xs">{value}</span>
+                      content={({ payload }) => (
+                        <ul className="flex flex-wrap justify-center gap-3 pt-4">
+                          {payload?.map((entry, index) => (
+                            <li
+                              key={`legend-${index}`}
+                              className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                            >
+                              <span
+                                className="inline-block h-3 w-3"
+                                style={{
+                                  backgroundColor: pieColors[index % pieColors.length],
+                                }}
+                              />
+                              <span>{entry.value}</span>
+                            </li>
+                          ))}
+                        </ul>
                       )}
                     />
                     <RechartsTooltip
@@ -294,7 +289,7 @@ export default function DashboardPage() {
               Regroupement des mémoires les plus consultés par domaine.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-8 pb-8">
             {error ? (
               <div className="flex h-[400px] items-center justify-center text-sm text-destructive border border-dashed border-destructive/50 rounded-lg bg-destructive/10">
                 {error}
@@ -304,7 +299,7 @@ export default function DashboardPage() {
                 Aucune donnée disponible
               </div>
             ) : (
-              <div className="h-[400px] w-full mt-4">
+              <div className="mx-auto mt-4 h-[400px] w-full md:w-1/2">
                 <TopMemoiresTreemap data={topMemoires} />
               </div>
             )}

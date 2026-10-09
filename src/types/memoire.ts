@@ -20,6 +20,39 @@ export interface Encadreur {
   id: string;
   nom: string;
   prenom: string;
+  titre?: string | null;
+  email?: string | null;
+}
+
+/** Forme minimale d'un encadreur sélectionné (ComboBox, formulaire de soumission) */
+export interface EncadreurOption {
+  id: string;
+  nom: string;
+  prenom: string;
+  titre?: string | null;
+}
+
+/** Ligne renvoyée par GET /encadreurs (l'email n'est pas exposé) */
+export interface EncadreurListItem extends EncadreurOption {
+  nbMemoiresEncadres: number;
+  nbMemoiresAuteur: number;
+}
+
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface EncadreurSearchResponse {
+  data: EncadreurListItem[];
+  meta: PaginationMeta;
+}
+
+export interface CreateEncadreurPayload {
+  nom: string;
+  prenom: string;
   titre?: string;
   email?: string;
 }

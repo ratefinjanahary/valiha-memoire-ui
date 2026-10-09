@@ -58,7 +58,7 @@ export const Sidebar: React.FC = () => {
   const handleLogoutConfirm = () => {
     logout();
     setShowLogoutDialog(false);
-    router.push("/login");
+    router.push("/");
   };
 
   const handleDeleteProfileConfirm = async () => {
@@ -68,7 +68,7 @@ export const Sidebar: React.FC = () => {
       await authService.deleteUser(user.id);
       toast.success("Votre compte a été supprimé avec succès.");
       logout();
-      router.push("/login");
+      router.push("/");
     } catch (err: any) {
       console.error("delete profile error:", err);
       toast.error("Une erreur est survenue lors de la suppression de votre compte.");
@@ -131,7 +131,7 @@ export const Sidebar: React.FC = () => {
               <DialogTitle>Confirmer la déconnexion</DialogTitle>
             </div>
             <DialogDescription>
-              Êtes-vous sûr de vouloir vous déconnecter ? Votre session sera terminée et vous serez redirigé vers la page de connexion.
+              Êtes-vous sûr de vouloir vous déconnecter ? Votre session sera terminée et vous serez redirigé vers la page d'accueil.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

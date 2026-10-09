@@ -12,15 +12,13 @@ interface TopMemoiresTreemapProps {
   data: TopMemoire[];
 }
 
-/* Une couleur par domaine */
+/* 5 couleurs dérivées de --primary (teinte ±, luminosité variée, texte blanc lisible) */
 const COLORS = [
-  "#4f46e5", // indigo
-  "#10b981", // émeraude
-  "#0ea5e9", // sky
-  "#8b5cf6", // violet
-  "#f59e0b", // ambre
-  "#ec4899", // rose
-  "#14b8a6", // teal
+  "var(--primary)",                                      // base
+  "oklch(from var(--primary) 0.62 c calc(h - 27))",      // bleu
+  "oklch(from var(--primary) 0.42 c calc(h + 28))",      // violet profond
+  "oklch(from var(--primary) 0.58 c calc(h + 55))",      // magenta
+  "oklch(from var(--primary) 0.56 calc(c * 0.75) calc(h - 52))", // bleu-cyan adouci
 ];
 
 type TreemapLeaf = {
@@ -85,7 +83,9 @@ const CustomizedContent = (props: TreemapContentProps) => {
             <p className="line-clamp-3 text-xs font-medium leading-snug">{name}</p>
             <p className="text-xl font-bold leading-none">
               {value}
-              <span className="ml-1 text-xs font-normal opacity-80">vues</span>
+              <span className="ml-1 text-xs font-normal opacity-80">
+                {value && value > 1 ? "vues" : "vue"}
+              </span>
             </p>
           </div>
         </foreignObject>

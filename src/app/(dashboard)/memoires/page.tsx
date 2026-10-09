@@ -133,7 +133,7 @@ export default function MemoiresPage() {
                   setIsDetailOpen(true);
                 }}
               >
-                <CardHeader className="pb-3 border-b">
+                <CardHeader className="pb-1 border-b">
                   <div className="flex justify-between items-start gap-2 mb-2">
                     <Badge variant="secondary" className="font-semibold lowercase bg-primary/10 text-primary hover:bg-primary/20">
                       {memoire.typeDiplome}
@@ -143,7 +143,7 @@ export default function MemoiresPage() {
                       {memoire.anneeSoutenance}
                     </div>
                   </div>
-                  <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">
+                  <h3 className="font-semibold line-clamp-2 group-hover:text-primary transition-colors">
                     {memoire.titre}
                   </h3>
                   <div className="text-sm text-muted-foreground flex items-center mt-1">
@@ -152,7 +152,7 @@ export default function MemoiresPage() {
                   </div>
                 </CardHeader>
 
-                <CardContent className="py-4 flex-1">
+                <CardContent className="flex-1">
                   <p className="text-sm text-muted-foreground line-clamp-3">
                     {memoire.resume || "Aucun résumé disponible."}
                   </p>

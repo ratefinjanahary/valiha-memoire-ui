@@ -9,6 +9,7 @@ import { Loader2, UploadCloud } from "lucide-react";
 
 import { memoireService } from "@/services/memoire.service";
 import { Universite, Domaine } from "@/types/memoire";
+import { EncadreurCombobox } from "@/components/encadreurs/encadreur-combobox";
 
 import {
   Dialog,
@@ -37,6 +38,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ["application/pdf"];
+const MAX_ENCADREURS = 5; // aligné sur l'API
+
+const encadreurOptionSchema = z.object({
+  id: z.string().uuid(),
+  nom: z.string(),
+  prenom: z.string(),
+  titre: z.string().nullish(),
+});
 
 const formSchema = z.object({
   titre: z.string().min(5, "Le titre est requis"),
@@ -48,6 +57,11 @@ const formSchema = z.object({
   auteurEmail: z.string().email("Email invalide"),
   universiteId: z.string().uuid("Université requise"),
   domaineId: z.string().uuid("Domaine requis"),
+  encadreurs: z
+    .array(encadreurOptionSchema)
+    .min(1, "Au moins un encadreur est requis")
+    .max(MAX_ENCADREURS, `${MAX_ENCADREURS} encadreurs maximum`),
+  auteurEncadreur: encadreurOptionSchema.nullable(),
   file: z.any()
     .refine((files) => files?.length === 1, "Un fichier PDF est requis.")
     .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `Taille max: 10MB.`)
@@ -80,8 +94,14 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
       auteurEmail: "",
       universiteId: "",
       domaineId: "",
+      encadreurs: [],
+      auteurEncadreur: null,
     },
   });
+
+  // Chaque ComboBox exclut les choix de l'autre : un auteur ne peut pas être son propre encadreur
+  const encadreursChoisis = form.watch("encadreurs");
+  const auteurEncadreurChoisi = form.watch("auteurEncadreur");
 
   useEffect(() => {
     if (isOpen) {
@@ -107,6 +127,11 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
       formData.append("auteurEmail", values.auteurEmail);
       formData.append("universiteId", values.universiteId);
       formData.append("domaineId", values.domaineId);
+      // Clé répétée : une entrée par encadreur (parsée en tableau côté API)
+      values.encadreurs.forEach((e) => formData.append("encadreurIds", e.id));
+      if (values.auteurEncadreur) {
+        formData.append("auteurEncadreurId", values.auteurEncadreur.id);
+      }
 
       await memoireService.submit(formData);
       
@@ -188,6 +213,46 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
               )} />
             </div>
 
+            <Controller control={form.control} name="encadreurs" render={({ field, fieldState }) => (
+              <Field>
+                <FieldLabel>Encadreur(s)</FieldLabel>
+                <FieldContent>
+                  <EncadreurCombobox
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    max={MAX_ENCADREURS}
+                    excludeIds={auteurEncadreurChoisi ? [auteurEncadreurChoisi.id] : []}
+                    placeholder="Rechercher par nom, prénom ou titre..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    1 à {MAX_ENCADREURS} encadreurs. Introuvable ? Créez-le depuis la liste.
+                  </p>
+                </FieldContent>
+                <FieldError errors={[fieldState.error]} />
+              </Field>
+            )} />
+
+            <Controller control={form.control} name="auteurEncadreur" render={({ field, fieldState }) => (
+              <Field>
+                <FieldLabel>L'auteur est lui-même un encadreur ? (optionnel)</FieldLabel>
+                <FieldContent>
+                  <EncadreurCombobox
+                    value={field.value ? [field.value] : []}
+                    onChange={(selection) => field.onChange(selection[0] ?? null)}
+                    onBlur={field.onBlur}
+                    max={1}
+                    excludeIds={encadreursChoisis.map((e) => e.id)}
+                    placeholder="Rechercher l'auteur parmi les encadreurs..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    À renseigner si l'auteur est déjà enregistré comme encadreur : son mémoire sera relié à lui dans le graphe.
+                  </p>
+                </FieldContent>
+                <FieldError errors={[fieldState.error]} />
+              </Field>
+            )} />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Controller control={form.control} name="typeDiplome" render={({ field, fieldState }) => (
                 <Field>
@@ -227,10 +292,22 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
             )} />
 
             <div className="flex justify-end gap-3 pt-6 pb-2">
-              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+              <Button 
+                type="button" 
+                size="lg" 
+                variant="outline" 
+                onClick={onClose} 
+                disabled={isSubmitting}
+                className="px-5"
+              >
                 Annuler
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button 
+                type="submit" 
+                size="lg" 
+                disabled={isSubmitting}
+                className="px-6"
+              >
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Soumettre
               </Button>
