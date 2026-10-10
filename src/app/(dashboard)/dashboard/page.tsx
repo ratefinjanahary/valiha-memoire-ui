@@ -13,6 +13,7 @@ import {
   Pie,
   Sector,
   Legend,
+  type PieSectorDataItem
 } from "recharts";
 import type { PieSectorShapeProps } from "recharts";
 import { XCircle, LucideIcon, BookCheck, BookAlert, BookSearch } from "lucide-react";
@@ -21,6 +22,7 @@ import { analyticsService } from "@/services/analytics.service";
 import { memoireService } from "@/services/memoire.service";
 import { TopMemoire } from "@/types/memoire";
 import { TopMemoiresTreemap } from "@/components/dashboard/top-memoires-treemap";
+import { AuditLogsTable } from "@/components/dashboard/audit-logs-table";
 
 import {
   Card,
@@ -64,11 +66,8 @@ const pieColors = [
 ];
 
 const MyCustomPie = (props: PieSectorShapeProps) => (
-  <Sector
-    {...props}
-    fill={pieColors[props.index % pieColors.length]}
-  />
-);
+  <Sector {...props} fill={pieColors[props.index % pieColors.length]} />
+)
 
 const kpiConfig: {
   key: keyof Kpis;
@@ -268,11 +267,12 @@ export default function DashboardPage() {
                       contentStyle={{
                         borderRadius: "8px",
                         border: "1px solid #eee",
+                        backgroundColor: "var(--color-background, #fff)",
+                        color: "var(--color-foreground, #111)",
                       }}
-                      formatter={(value: any, name: any) => [
-                        value,
-                        name,
-                      ]}
+                      itemStyle={{ color: "var(--color-foreground, #111)" }}
+                      labelStyle={{ color: "var(--color-foreground, #111)" }}
+                      formatter={(value: any, name: any) => [value, name]}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -305,6 +305,10 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+        {/* Journal d'audit — à droite du treemap */}
+        <div className="col-span-full sm:col-span-4 lg:col-span-3">
+          <AuditLogsTable  />
+        </div>
       </div>
     </div>
   );

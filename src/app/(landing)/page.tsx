@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { GraduationCap, BookOpen, Search, Shield, ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/authStore";
@@ -28,13 +28,44 @@ const features = [
   },
 ];
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: { staggerChildren: 0.15, delayChildren: 0.3 },
   },
 };
+
+const fadeUpVariants: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 300,
+      damping: 25,
+    },
+  },
+};
+
+const featuresContainerVariants: Variants = {
+  hidden: { opacity: 0, y: 50 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { delay: 0.8, duration: 0.6, ease: "easeOut" },
+  },
+};
+
+const featureCardVariants = (index: number): Variants => ({
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { delay: 0.9 + index * 0.2, duration: 0.5 },
+  },
+});
 
 export default function HeroPage() {
   const router = useRouter();
@@ -84,18 +115,10 @@ export default function HeroPage() {
           className="max-w-4xl w-full mx-auto text-center"
         >
           {/* Badge */}
-          <motion.div variants={{
-            hidden: { opacity: 0, y: 30 },
-            visible: { 
-              opacity: 1, 
-              y: 0, 
-              transition: { 
-                type: "spring", 
-                stiffness: 300, damping: 25 
-              } 
-            },
-            }} 
-            className="mb-6 inline-flex">
+          <motion.div
+            variants={fadeUpVariants}
+            className="mb-6 inline-flex"
+          >
             <span className="inline-flex items-center gap-2 rounded-full font-semibold border border-primary/30 bg-primary/5 px-4 py-1.5 text-sm text-primary">
               <Sparkles className="h-3.5 w-3.5" />
               Plateforme académique numérique
@@ -103,17 +126,8 @@ export default function HeroPage() {
           </motion.div>
 
           {/* Heading */}
-          <motion.h1 variants={{
-            hidden: { opacity: 0, y: 30 },
-            visible: { 
-              opacity: 1, 
-              y: 0, 
-              transition: { 
-                type: "spring", 
-                stiffness: 300, damping: 25 
-              } 
-            },
-            }}
+          <motion.h1
+            variants={fadeUpVariants}
             className="text-4xl font-bold tracking-tight leading-tight text-foreground"
           >
             La bibliothèque de{" "}
@@ -130,17 +144,8 @@ export default function HeroPage() {
           </motion.h1>
 
           {/* Subheading */}
-          <motion.p variants={{
-            hidden: { opacity: 0, y: 30 },
-            visible: { 
-              opacity: 1, 
-              y: 0, 
-              transition: { 
-                type: "spring", 
-                stiffness: 300, damping: 25 
-              } 
-            },
-            }}
+          <motion.p
+            variants={fadeUpVariants}
             className="mt-6 text-muted-foreground max-w-2xl mx-auto leading-relaxed"
           >
             Accédez, recherchez et gérez les mémoires académiques de votre institution en toute simplicité.
@@ -148,45 +153,39 @@ export default function HeroPage() {
           </motion.p>
 
           {/* CTA Buttons */}
-          <motion.div variants={{
-            hidden: { opacity: 0, y: 30 },
-            visible: { 
-              opacity: 1, 
-              y: 0, 
-              transition: { 
-                type: "spring", 
-                stiffness: 300, damping: 25 
-              } 
-            },
-            }}
+          <motion.div
+            variants={fadeUpVariants}
             className="mt-10 flex flex-wrap items-center justify-center gap-4"
           >
-            <Button size="lg" className="h-10 px-6 text-base relative overflow-hidden group"
+            <Button
+              size="lg"
+              className="h-10 px-6 text-base relative overflow-hidden group"
               render={
                 <Link href="/login">
-                <motion.span
-                  initial={{ x: "-100%" }}
-                  animate={{ x: "200%" }}
-                  transition={{ repeat: Infinity, duration: 2.5, ease: "linear", repeatDelay: 1.5 }}
-                  className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent"
-                />
-                Se connecter
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
+                  <motion.span
+                    initial={{ x: "-100%" }}
+                    animate={{ x: "200%" }}
+                    transition={{ repeat: Infinity, duration: 2.5, ease: "linear", repeatDelay: 1.5 }}
+                    className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent"
+                  />
+                  Se connecter
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
               }
             />
-            <Button size="lg" variant="outline" className="h-10 px-6 text-base" 
-              render={
-                <Link href="/register">Créer un compte</Link>
-              }
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-10 px-6 text-base"
+              render={<Link href="/register">Créer un compte</Link>}
             />
           </motion.div>
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8, duration: 0.6, ease: "easeOut" }}
+          variants={featuresContainerVariants}
+          initial="hidden"
+          animate="visible"
           className="mt-24 max-w-5xl w-full mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 px-4"
         >
           {features.map((feature, i) => {
@@ -194,9 +193,9 @@ export default function HeroPage() {
             return (
               <motion.div
                 key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9 + i * 0.1, duration: 0.5 }}
+                variants={featureCardVariants(i)}
+                initial="hidden"
+                animate="visible"
                 className="group relative rounded-md border border-border backdrop-blur-sm p-6 text-left overflow-hidden"
               >
                 <div

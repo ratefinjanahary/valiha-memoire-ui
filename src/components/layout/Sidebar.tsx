@@ -155,91 +155,103 @@ export const Sidebar: React.FC = () => {
       </Dialog>
 
       <AnimatePresence>
-        {isSidebarOpen && (
-          <motion.aside
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 280, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="h-screen border-r flex flex-col shrink-0"
+        <motion.aside
+          initial={false}
+          animate={{ width: isSidebarOpen ? 280 : 72 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className="h-screen border-r flex flex-col shrink-0 overflow-hidden"
+        >
+          {/* Logo & Brand */}
+          <div
+            className={cn(
+              "h-16 flex items-center border-b shrink-0",
+              isSidebarOpen ? "px-6" : "justify-center px-0"
+            )}
           >
-            {/* Logo & Brand */}
-            <div className="h-16 flex items-center px-6 border-b shrink-0">
-              <GraduationCap className="h-6 w-6 text-primary mr-3" />
+            <GraduationCap className={cn("h-6 w-6 text-primary shrink-0", isSidebarOpen && "mr-3")} />
+            {isSidebarOpen && (
               <span className="font-bold text-lg tracking-tight whitespace-nowrap">Valiha App</span>
-            </div>
+            )}
+          </div>
 
-            {/* Navigation Links */}
-            <nav className="flex-1 py-5 px-3 space-y-2 overflow-y-auto">
-              {navLinks
-                .filter((link) => !link.roles || (user?.role && link.roles.includes(user.role)))
-                .map((link) => {
-                  const isActive = pathname.startsWith(link.href);
-                  const Icon = link.icon;
+          {/* Navigation Links */}
+          <nav className="flex-1 py-5 px-3 space-y-2 overflow-y-auto overflow-x-hidden">
+            {navLinks
+              .filter((link) => !link.roles || (user?.role && link.roles.includes(user.role)))
+              .map((link) => {
+                const isActive = pathname.startsWith(link.href);
+                const Icon = link.icon;
 
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className={cn(
-                        "flex items-center px-3 py-1.5 rounded-sm transition-colors font-semibold text-[15px]",
-                        isActive
-                          ? "bg-primary/7 text-primary"
-                          : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
-                      )}
-                    >
-                      <Icon className="h-5 w-5 mr-3 shrink-0" />
-                      <span>{link.name}</span>
-                    </Link>
-                  );
-                })}
-            </nav>
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    title={!isSidebarOpen ? link.name : undefined}
+                    aria-label={link.name}
+                    className={cn(
+                      "flex items-center py-1.5 rounded-sm transition-colors font-semibold text-[15px]",
+                      isSidebarOpen ? "px-3" : "justify-center px-0",
+                      isActive
+                        ? "bg-primary/7 text-primary"
+                        : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
+                    )}
+                  >
+                    <Icon className={cn("h-5 w-5 shrink-0", isSidebarOpen && "mr-3")} />
+                    {isSidebarOpen && <span className="whitespace-nowrap">{link.name}</span>}
+                  </Link>
+                );
+              })}
+          </nav>
 
-            {/* Bottom: Theme + Profile */}
-            <div className="border-t px-3 py-3 flex items-center justify-between shrink-0">
-              <ThemeToggle />
+          {/* Bottom: Theme + Profile */}
+          <div
+            className={cn(
+              "border-t px-3 py-3 flex items-center shrink-0",
+              isSidebarOpen ? "justify-between" : "flex-col gap-2 justify-center"
+            )}
+          >
+            <ThemeToggle />
 
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button variant="ghost" size="icon" className="rounded-full" aria-label="Profil" />
-                  }
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="ghost" size="icon" className="rounded-full" aria-label="Profil" />
+                }
+              >
+                <User className="h-5 w-5" />
+                <span className="sr-only">Menu utilisateur</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="end" className="w-56 mb-1">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {user?.prenom} {user?.nom}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email || "default.admin@email.com"}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                </DropdownMenuGroup>
+                <DropdownMenuItem
+                  className="text-destructive hover:text-destructive hover:bg-none"
+                  onClick={() => setShowDeleteProfileDialog(true)}
                 >
-                  <User className="h-5 w-5" />
-                  <span className="sr-only">Menu utilisateur</span>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent side="top" align="end" className="w-56 mb-1">
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel>
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">
-                          {user?.prenom} {user?.nom}
-                        </p>
-                        <p className="text-xs leading-none text-muted-foreground">
-                          {user?.email || "default.admin@email.com"}
-                        </p>
-                      </div>
-                    </DropdownMenuLabel>
-                  </DropdownMenuGroup>
-                  <DropdownMenuItem
-                    className="text-destructive hover:text-destructive hover:bg-none"
-                    onClick={() => setShowDeleteProfileDialog(true)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Supprimer mon compte
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-destructive hover:text-destructive hover:bg-none"
-                    onClick={() => setShowLogoutDialog(true)}
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Déconnexion
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </motion.aside>
-        )}
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Supprimer mon compte
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive hover:text-destructive hover:bg-none"
+                  onClick={() => setShowLogoutDialog(true)}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Déconnexion
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </motion.aside>
       </AnimatePresence>
     </>
   );

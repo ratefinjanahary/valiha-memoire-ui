@@ -34,7 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_FILE_TYPES = ["application/pdf"];
@@ -225,9 +224,6 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
                     excludeIds={auteurEncadreurChoisi ? [auteurEncadreurChoisi.id] : []}
                     placeholder="Rechercher par nom, prénom ou titre..."
                   />
-                  <p className="text-xs text-muted-foreground">
-                    1 à {MAX_ENCADREURS} encadreurs. Introuvable ? Créez-le depuis la liste.
-                  </p>
                 </FieldContent>
                 <FieldError errors={[fieldState.error]} />
               </Field>
@@ -292,22 +288,10 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
             )} />
 
             <div className="flex justify-end gap-3 pt-6 pb-2">
-              <Button 
-                type="button" 
-                size="lg" 
-                variant="outline" 
-                onClick={onClose} 
-                disabled={isSubmitting}
-                className="px-5"
-              >
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
                 Annuler
               </Button>
-              <Button 
-                type="submit" 
-                size="lg" 
-                disabled={isSubmitting}
-                className="px-6"
-              >
+              <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Soumettre
               </Button>

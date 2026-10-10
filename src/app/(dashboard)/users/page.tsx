@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
   Loader2, Search, Trash2, Shield, UserStar,
   ChevronLeft, ChevronRight, AlertTriangle, Mail, Calendar,
-  Library, GraduationCap, Globe, CircleCheck, CircleX,
+  BookText, GraduationCap, Globe, CircleCheck, CircleX,
 } from "lucide-react";
 import { motion, AnimatePresence, type Variants } from "motion/react";
 import { toast } from "sonner";
@@ -71,7 +71,7 @@ const cardVariants: Variants = {
 
 const roleIcons = {
   ADMIN: UserStar,
-  DOCUMENTALISTE: Library,
+  DOCUMENTALISTE: BookText,
   ETUDIANT: GraduationCap,
   PUBLIC: Globe,
 };
@@ -239,7 +239,7 @@ export default function UsersManagementPage() {
                   exit="exit"
                 >
                   <Card className="group relative overflow-hidden p-5 transition-all duration-300 h-full flex flex-col">
-                    <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold uppercase text-sm shrink-0 ring-2 ring-background">
                           {u.prenom?.[0]}
@@ -266,7 +266,7 @@ export default function UsersManagementPage() {
                     </div>
 
                     {/* Badges rôle + statut */}
-                    <div className="flex items-center gap-2 flex-wrap mb-3">
+                    <div className="flex items-center gap-1 flex-wrap">
                       <Badge variant="outline" className="gap-1">
                         {(() => {
                           const Icon = roleIcons[u.role as keyof typeof roleIcons] ?? Globe;
@@ -303,11 +303,11 @@ export default function UsersManagementPage() {
                     </div>
 
                     {/* Actions (poussées en bas de la carte) */}
-                    <div className="mt-auto flex items-center gap-2">
+                    <div className="mt-auto flex items-center justify-end gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 flex items-center gap-1.5"
+                        className="flex items-center gap-1.5"
                         onClick={() => handleOpenRoleChange(u)}
                       >
                         <Shield className="h-3.5 w-3.5" />
