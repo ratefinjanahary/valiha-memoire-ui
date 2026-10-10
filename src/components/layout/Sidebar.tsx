@@ -3,7 +3,21 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutDashboard, BookOpen, Search, GraduationCap, LogOut, User, AlertTriangle, BookCheck, Users, Trash2, Loader2 } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  BookOpen, 
+  Search, 
+  ChartNetwork, 
+  GraduationCap, 
+  LogOut, 
+  User, 
+  AlertTriangle, 
+  BookCheck, 
+  Users, 
+  Trash2, 
+  Loader2,
+  type LucideIcon
+} from "lucide-react";
 import { useUiStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { cn } from "@/lib/utils";
@@ -29,7 +43,6 @@ import { useState } from "react";
 
 import { authService } from "@/services/auth.service";
 import { toast } from "sonner";
-import { type LucideIcon } from "lucide-react";
 
 interface NavLink {
   name: string;
@@ -44,6 +57,7 @@ const navLinks: NavLink[] = [
   { name: "Modération", href: "/moderation", icon: BookCheck, roles: ["ADMIN", "DOCUMENTALISTE"] },
   { name: "Mémoires", href: "/memoires", icon: BookOpen },
   { name: "Recherche", href: "/search", icon: Search },
+  { name: "Graphe", href: "/graph", icon: ChartNetwork },
 ];
 
 export const Sidebar: React.FC = () => {

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { 
-  X, Loader2, Calendar, GraduationCap, Building2, 
-  BookOpen, Download, UserCheck, ChevronRight, Eye 
+  Loader2, Calendar, GraduationCap, Building2, 
+  BookOpen, Download, UserCheck, ChevronRight, Eye, 
+  Network
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,6 +30,7 @@ interface MemoireDetailModalProps {
 }
 
 export function MemoireDetailModal({ memoireId, isOpen, onClose, onSelectSimilar }: MemoireDetailModalProps) {
+  const router = useRouter();
   const [memoire, setMemoire] = useState<Memoire | null>(null);
   const [similaires, setSimilaires] = useState<Memoire[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -226,6 +229,17 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose, onSelectSimilar
             </ScrollArea>
 
             <div className="px-6 py-4 border-t bg-muted/20 flex flex-col sm:flex-row gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  router.push(`/graph?focus=mem_${memoire.id}`);
+                  onClose();
+                }}
+                className="w-full sm:w-auto"
+              >
+                <Network className="mr-2 h-4 w-4" />
+                Voir dans le graphe
+              </Button>
               <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
                 Fermer
               </Button>
