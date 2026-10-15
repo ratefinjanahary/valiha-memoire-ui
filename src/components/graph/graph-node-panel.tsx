@@ -30,6 +30,7 @@ interface GraphNodePanelProps {
   links: NodeLink[];
   onSelect: (id: string) => void;
   onClose: () => void;
+  onOpenMemoire: (id: string) => void;
 }
 
 export function GraphNodePanel({
@@ -37,6 +38,7 @@ export function GraphNodePanel({
   links,
   onSelect,
   onClose,
+  onOpenMemoire,
 }: GraphNodePanelProps) {
   const groups = useMemo(() => {
     const map = new Map<string, GraphNode[]>();
@@ -89,8 +91,8 @@ export function GraphNodePanel({
 
       <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4">
         {node.type === "memoire" && (
-          <Button asChild size="sm">
-            <Link href={memoireHref(String(d.refId))}>Ouvrir le mémoire</Link>
+          <Button size="sm" onClick={() => onOpenMemoire(String(d.refId))}>
+            Ouvrir le mémoire
           </Button>
         )}
 
