@@ -12,7 +12,7 @@ import {
   LogOut, 
   User, 
   AlertTriangle, 
-  BookCheck, 
+  LibraryBig , 
   Users, 
   Trash2, 
   Loader2,
@@ -54,7 +54,7 @@ interface NavLink {
 const navLinks: NavLink[] = [
   { name: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
   { name: "Utilisateurs", href: "/users", icon: Users, roles: ["ADMIN"] },
-  { name: "Modération", href: "/moderation", icon: BookCheck, roles: ["ADMIN", "DOCUMENTALISTE"] },
+  { name: "Modération", href: "/moderation", icon: LibraryBig, roles: ["ADMIN", "DOCUMENTALISTE"] },
   { name: "Mémoires", href: "/memoires", icon: BookOpen },
   { name: "Recherche", href: "/search", icon: Search },
   { name: "Graphe", href: "/graph", icon: ChartNetwork },
@@ -203,14 +203,14 @@ export const Sidebar: React.FC = () => {
                     title={!isSidebarOpen ? link.name : undefined}
                     aria-label={link.name}
                     className={cn(
-                      "flex items-center py-1.5 rounded-sm transition-colors font-semibold text-[15px]",
-                      isSidebarOpen ? "px-3" : "justify-center px-0",
+                      "flex items-center py-1.5 rounded-sm transition-colors font-semibold text-sm",
+                      isSidebarOpen ? "px-3" : "justify-center py-2",
                       isActive
                         ? "bg-primary/7 text-primary"
                         : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
                     )}
                   >
-                    <Icon className={cn("h-5 w-5 shrink-0", isSidebarOpen && "mr-3")} />
+                    <Icon className={cn("h-4.5 w-4.5 shrink-0", isSidebarOpen && "mr-3")} />
                     {isSidebarOpen && <span className="whitespace-nowrap">{link.name}</span>}
                   </Link>
                 );

@@ -45,18 +45,18 @@ import {
 } from "@/components/ui/table";
 
 /* Helpers */
-
-// "USER_LOGIN" -> "User login" (le code brut reste visible au survol)
+/* "USER_LOGIN" -> "User login" (le code brut reste visible au survol) */
 function formatAction(action: string) {
   const text = action.replace(/_/g, " ").toLowerCase();
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 // Couleur du badge déduite du nom de l'action (purement cosmétique)
-function actionVariant(action: string): "default" | "secondary" | "destructive" {
+function actionVariant(action: string): "violet-soft" | "violet-outline" | "secondary" | "destructive" {
   const a = action.toUpperCase();
   if (/(DELETE|SUPPR|REJECT|REJET|FAIL|ECHEC|DENIED)/.test(a)) return "destructive";
-  if (/(CREATE|SUBMIT|VALID|APPROV|LOGIN|REGISTER)/.test(a)) return "default";
+  if (/(CREATE|VALID|APPROV|LOGIN|REGISTER)/.test(a)) return "violet-outline";
+  if (/(SUBMIT)/.test(a)) return "violet-soft";
   return "secondary";
 }
 
@@ -66,10 +66,6 @@ function formatDate(iso: string) {
     timeStyle: "short",
   });
 }
-
-/* -------------------------------------------------------------------------- */
-/*  Composant                                                                 */
-/* -------------------------------------------------------------------------- */
 
 export function AuditLogsTable() {
   const reduceMotion = useReducedMotion();
@@ -135,7 +131,7 @@ export function AuditLogsTable() {
     });
   }
 
-  /* ----------------------------- Suppression ------------------------------ */
+  /* Suppression */
 
   async function confirmDelete() {
     if (!pending) return;
@@ -161,11 +157,7 @@ export function AuditLogsTable() {
     }
   }
 
-  /* ------------------------------ Animation ------------------------------- */
-
-  // Entrée en cascade des lignes, déclenchée quand elles deviennent visibles
-  // (le tableau est en bas du dashboard : une animation au montage serait
-  // jouée hors écran). Désactivée si l'utilisateur préfère moins de mouvement.
+  /* Animation */
   const rowVariants: Variants = {
     hidden: { opacity: 0, y: reduceMotion ? 0 : 14 },
     visible: (i: number) => ({
@@ -184,7 +176,7 @@ export function AuditLogsTable() {
     },
   };
 
-  /* -------------------------------- Rendu --------------------------------- */
+  /* Rendu */
 
   if (forbidden) return null;
 

@@ -73,6 +73,7 @@ export interface Memoire {
   encadreurs?: { encadreur: Encadreur; role?: string }[];
   nbConsultations?: number;
   jaccardScore?: number; // Pour les recommandations
+  similarity?: number; // Recherche sémantique (cosinus, 0 à 1)
 }
 
 export interface MemoireSearchResponse {

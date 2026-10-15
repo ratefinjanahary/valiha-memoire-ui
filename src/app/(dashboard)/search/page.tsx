@@ -7,12 +7,19 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { searchService, TrendingKeyword } from "@/services/search.service";
 import { Memoire } from "@/types/memoire";
+import { MemoireCard } from "@/components/memoires/memoire-card";
 import { MemoireDetailModal } from "@/components/memoires/memoire-detail-modal";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ResultSkeletonCard, SemanticLoader } from "@/components/memoires/semantic-loader";
+import { SemanticLoader } from "@/components/memoires/semantic-loader";
+import * as v from "@/lib/motion-variants";
+
+const pageStagger = v.stagger(0.1);
+const heroStagger = v.stagger(0.1, 0.05);
+const trendingStagger = v.stagger(0.04, 0.1);
+const gridStagger = v.stagger(0.08);
 
 export default function SemanticSearchPage() {
   const [query, setQuery] = useState("");
@@ -58,20 +65,15 @@ export default function SemanticSearchPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <motion.div
+      variants={pageStagger}
+      initial="hidden"
+      animate="visible"
+      className="max-w-6xl mx-auto space-y-8"
+    >
       {/* Hero Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          type: "spring",
-          stiffness: 300,
-          damping: 28,
-          delay: 0.05,
-        }}
-        className="relative text-center py-8 px-4 rounded-lg"
-      >
-        {/* Brume centrée sur icône / titre / description */}
+      <motion.div variants={v.fadeUp} className="relative text-center py-8 px-4 rounded-lg">
+        {/* Brume */}
         <div
           aria-hidden
           className="pointer-events-none absolute top-6 left-1/2 h-56 w-full max-w-xl -translate-x-1/2 opacity-75"
@@ -94,64 +96,23 @@ export default function SemanticSearchPage() {
         </div>
 
         {/* Contenu du hero */}
-        <div className="relative z-10 space-y-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{
-              type: "spring",
-              stiffness: 350,
-              damping: 22,
-              delay: 0.15,
-            }}
-            className="flex justify-center mb-4"
-          >
+        <motion.div variants={heroStagger} className="relative z-10 space-y-4">
+          <motion.div variants={v.iconPop} className="flex justify-center mb-4">
             <div className="h-16 w-16 flex items-center justify-center">
               <Sparkles className="h-8 w-8 text-primary" />
             </div>
           </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              type: "spring",
-              stiffness: 300,
-              damping: 24,
-              delay: 0.25,
-            }}
-            className="text-2xl font-semibold text-primary"
-          >
+          <motion.h1 variants={v.fadeUp} className="text-2xl font-semibold text-primary">
             Recherche Semantique
           </motion.h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              type: "spring",
-              stiffness: 300,
-              damping: 24,
-              delay: 0.35,
-            }}
-            className="text-md text-muted-foreground max-w-2xl mx-auto"
-          >
+          <motion.p variants={v.fadeUp} className="text-md text-muted-foreground max-w-2xl mx-auto">
             Posez votre question naturellement. Notre IA Google analysera le sens de votre requete
             pour trouver les memoires les plus pertinents.
           </motion.p>
 
-          <motion.form
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              type: "spring",
-              stiffness: 300,
-              damping: 24,
-              delay: 0.45,
-            }}
-            onSubmit={handleSemanticSearch}
-            className="max-w-2xl mx-auto mt-8 flex gap-2"
-          >
+          <motion.form variants={v.fadeUp} onSubmit={handleSemanticSearch} className="max-w-2xl mx-auto mt-8 flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-2.5 h-5 w-5 text-muted-foreground" />
               <Input
@@ -184,33 +145,12 @@ export default function SemanticSearchPage() {
               )}
             </Button>
           </motion.form>
-        </div>
+        </motion.div>
       </motion.div>
 
       {/* Bandeau tendances — sorti du grid des résultats */}
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          type: "spring",
-          stiffness: 300,
-          damping: 28,
-          delay: 0.55,
-        }}
-        aria-labelledby="trending-title"
-        className="rounded-md border px-5 py-4"
-      >
-        <motion.div
-          initial={{ opacity: 0, x: -12 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{
-            type: "spring",
-            stiffness: 300,
-            damping: 24,
-            delay: 0.65,
-          }}
-          className="flex items-center gap-3 mb-3"
-        >
+      <motion.section variants={v.fadeUp} className="rounded-md border px-5 py-4">
+        <motion.div variants={v.slideInLeft} className="flex items-center gap-3 mb-3">
           <TrendingUp className="h-4 w-4 text-primary" />
           <h2
             id="trending-title"
@@ -221,21 +161,16 @@ export default function SemanticSearchPage() {
         </motion.div>
 
         {trending.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
+          <motion.div
+            variants={trendingStagger}
+            initial="hidden"
+            animate="visible"
+            className="flex flex-wrap gap-2"
+          >
             {trending.map((t, i) => (
-              <motion.div
-                key={t.motCleId}
-                initial={{ opacity: 0, scale: 0.85, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 400,
-                  damping: 22,
-                  delay: 0.7 + i * 0.04,
-                }}
-              >
+              <motion.div key={t.motCleId} variants={v.pop}>
                 <Badge
-                  variant="secondary"
+                  variant="violet-soft"
                   className="cursor-pointer hover:bg-primary/20 transition-colors"
                   onClick={() => handleKeywordClick(t.libelle)}
                 >
@@ -244,13 +179,13 @@ export default function SemanticSearchPage() {
                 </Badge>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         ) : (
           <p className="text-sm text-muted-foreground">Chargement des tendances...</p>
         )}
       </motion.section>
 
-      {/* Résultats — pleine largeur */}
+      {/* Résultats */}
       <div className="min-h-100">
         <AnimatePresence mode="wait">
           {!hasSearched ? (
@@ -291,11 +226,6 @@ export default function SemanticSearchPage() {
               className="space-y-8"
             >
               <SemanticLoader />
-              <div aria-hidden className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <ResultSkeletonCard key={i} index={i} />
-                ))}
-              </div>
             </motion.div>
           ) : results.length === 0 ? (
             <motion.div
@@ -304,48 +234,37 @@ export default function SemanticSearchPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ type: "spring", stiffness: 300, damping: 26 }}
-              className="h-full flex flex-col items-center justify-center text-center p-12 border rounded-2xl bg-card/50 border-dashed"
+              className="h-full flex flex-col items-center justify-center text-center p-12 border rounded-md bg-card/40"
             >
-              <p className="text-muted-foreground">Aucun resultat semantique trouve pour cette requete.</p>
+              <p className="text-muted-foreground">Aucun resultat semantique trouve pour cette requête.</p>
             </motion.div>
           ) : (
             <motion.div
               key="results"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ type: "spring", stiffness: 300, damping: 26 }}
+              variants={v.stagger(0.05)}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
               className="space-y-4"
             >
-              <motion.h2
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 300,
-                  damping: 24,
-                  delay: 0.05,
-                }}
-                className="text-lg font-semibold flex items-center"
-              >
+              <motion.h2 variants={v.slideInLeft} className="text-lg font-semibold flex items-center">
                 <Badge variant="outline" className="py-3 mr-3">
                   {results.length} resultats
                 </Badge>
                 Les plus pertinents selon l&apos;IA
               </motion.h2>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {results.map((memoire, index) => (
-                  <MemoireResultCard 
-                    key={memoire.id} 
-                    memoire={memoire} 
-                    index={index} 
+              <motion.div variants={gridStagger} className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {results.map((memoire) => (
+                  <MemoireCard
+                    key={memoire.id}
+                    memoire={memoire}
                     onClick={() => {
                       setSelectedMemoireId(memoire.id);
                       setIsDetailOpen(true);
                     }}
                   />
                 ))}
-              </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -362,7 +281,7 @@ export default function SemanticSearchPage() {
           setSelectedMemoireId(id);
         }}
       />
-    </div>
+    </motion.div>
   );
 }
 
@@ -379,153 +298,3 @@ const degreeLabel: Record<string, string> = {
   MASTER: "Master",
   DOCTORAT: "Doctorat",
 };
-
-function MemoireResultCard({ memoire, index, onClick }: { memoire: Memoire; index: number; onClick: () => void }) {
-  const relevancePercent =
-    memoire.jaccardScore != null ? Math.round(memoire.jaccardScore * 100) : null;
-
-  return (
-    <motion.article
-      initial={{ opacity: 0, y: 24, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{
-        delay: 0.15 + index * 0.08,
-      }}
-      onClick={onClick}
-      className="group relative flex flex-col gap-3 rounded-md border px-5 py-4 transition-all duration-200 hover:border-primary/40 cursor-pointer"
-    >
-      {/* Numero de rang */}
-      <span className="absolute top-4 right-4 text-xs font-mono text-muted-foreground/40 select-none">
-        #{index + 1}
-      </span>
-
-      {/* En-tete : diplome + metadonnees */}
-      <motion.div
-        initial={{ opacity: 0, x: -12 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{
-          type: "spring",
-          stiffness: 300,
-          damping: 24,
-          delay: 0.2 + index * 0.08,
-        }}
-        className="flex flex-wrap items-center gap-2 pr-8"
-      >
-        <Badge variant={degreeVariant[memoire.typeDiplome] ?? "secondary"} className="rounded-full">
-          {degreeLabel[memoire.typeDiplome] ?? memoire.typeDiplome}
-        </Badge>
-        <span className="text-xs text-muted-foreground">{memoire.anneeSoutenance}</span>
-        {memoire.universite && (
-          <span className="text-xs text-muted-foreground">
-            &middot; {memoire.universite.sigle ?? memoire.universite.nom}
-          </span>
-        )}
-        {memoire.domaine && (
-          <span className="text-xs text-muted-foreground">&middot; {memoire.domaine.nom}</span>
-        )}
-      </motion.div>
-
-      <motion.h3
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          type: "spring",
-          stiffness: 300,
-          damping: 24,
-          delay: 0.25 + index * 0.08,
-        }}
-        className="text-base font-semibold leading-snug text-foreground group-hover:text-primary transition-colors line-clamp-2"
-      >
-        {memoire.titre}
-      </motion.h3>
-
-      <motion.p
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          type: "spring",
-          stiffness: 300,
-          damping: 24,
-          delay: 0.3 + index * 0.08,
-        }}
-        className="text-sm text-muted-foreground"
-      >
-        {memoire.auteurPrenom} {memoire.auteurNom}
-      </motion.p>
-
-      {memoire.resume && (
-        <motion.p
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            type: "spring",
-            stiffness: 300,
-            damping: 24,
-            delay: 0.35 + index * 0.08,
-          }}
-          className="text-sm text-muted-foreground line-clamp-3 leading-relaxed"
-        >
-          {memoire.resume}
-        </motion.p>
-      )}
-
-      {/* Mots-cles */}
-      {memoire.motsCles && memoire.motsCles.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            type: "spring",
-            stiffness: 300,
-            damping: 24,
-            delay: 0.4 + index * 0.08,
-          }}
-          className="flex flex-wrap gap-1.5 pt-1"
-        >
-          {memoire.motsCles.slice(0, 6).map(({ motCle }) => (
-            <Badge key={motCle.id} variant="outline" className="text-[11px] px-2 py-0.5">
-              {motCle.libelle}
-            </Badge>
-          ))}
-          {memoire.motsCles.length > 6 && (
-            <Badge variant="ghost" className="text-[11px] px-2 py-0.5 text-muted-foreground">
-              +{memoire.motsCles.length - 6}
-            </Badge>
-          )}
-        </motion.div>
-      )}
-
-      {/* Barre de pertinence semantique */}
-      {relevancePercent !== null && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            type: "spring",
-            stiffness: 300,
-            damping: 24,
-            delay: 0.45 + index * 0.08,
-          }}
-          className="pt-1 space-y-1"
-        >
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-            <span>Pertinence semantique</span>
-            <span className="font-medium text-foreground">{relevancePercent}%</span>
-          </div>
-          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-            <motion.div
-              className="h-full rounded-full bg-primary"
-              initial={{ width: 0 }}
-              animate={{ width: `${relevancePercent}%` }}
-              transition={{
-                delay: 0.5 + index * 0.08,
-                duration: 0.6,
-                ease: "easeOut",
-              }}
-            />
-          </div>
-        </motion.div>
-      )}
-    </motion.article>
-  );
-}

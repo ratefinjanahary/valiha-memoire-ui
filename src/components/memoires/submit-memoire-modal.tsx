@@ -10,6 +10,7 @@ import { Loader2, UploadCloud } from "lucide-react";
 import { memoireService } from "@/services/memoire.service";
 import { Universite, Domaine } from "@/types/memoire";
 import { EncadreurCombobox } from "@/components/encadreurs/encadreur-combobox";
+import { KeywordsInput } from "@/components/memoires/keywords-input";
 
 import {
   Dialog,
@@ -35,9 +36,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_FILE_TYPES = ["application/pdf"];
 const MAX_ENCADREURS = 5; // aligné sur l'API
+const MAX_MOTS_CLES = 10;
 
 const encadreurOptionSchema = z.object({
   id: z.string().uuid(),
@@ -63,11 +65,13 @@ const formSchema = z.object({
   auteurEncadreur: encadreurOptionSchema.nullable(),
   file: z.any()
     .refine((files) => files?.length === 1, "Un fichier PDF est requis.")
-    .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `Taille max: 10MB.`)
+    .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `Taille max: 5 Mo.`)
     .refine(
       (files) => ACCEPTED_FILE_TYPES.includes(files?.[0]?.type),
       "Seuls les fichiers PDF sont acceptés."
     ),
+  // dans formSchema
+  motsCles: z.array(z.string().trim().min(2).max(50)).max(MAX_MOTS_CLES, `${MAX_MOTS_CLES} mots-clés maximum`),
 });
 
 interface SubmitMemoireModalProps {
@@ -95,6 +99,7 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
       domaineId: "",
       encadreurs: [],
       auteurEncadreur: null,
+      motsCles: []
     },
   });
 
@@ -126,8 +131,9 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
       formData.append("auteurEmail", values.auteurEmail);
       formData.append("universiteId", values.universiteId);
       formData.append("domaineId", values.domaineId);
-      // Clé répétée : une entrée par encadreur (parsée en tableau côté API)
+      // Clé répétée, comme encadreurIds (parsée en tableau côté API)
       values.encadreurs.forEach((e) => formData.append("encadreurIds", e.id));
+      values.motsCles.forEach((m) => formData.append("motsCles", m));
       if (values.auteurEncadreur) {
         formData.append("auteurEncadreurId", values.auteurEncadreur.id);
       }
@@ -146,7 +152,7 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-150 max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-150 md:max-w-200 max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b bg-muted/30">
           <DialogTitle className="flex items-center text-xl font-semibold">
             <UploadCloud className="mr-2 h-5 w-5 text-primary" />
@@ -179,6 +185,24 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
 
             <Controller control={form.control} name="resume" render={({ field, fieldState }) => (
               <Field><FieldLabel>Résumé</FieldLabel><FieldContent><Textarea className="h-24 resize-none" {...field} /></FieldContent><FieldError errors={[fieldState.error]} /></Field>
+            )} />
+
+            <Controller control={form.control} name="motsCles" render={({ field, fieldState }) => (
+              <Field>
+                <FieldLabel>Mots-clés (optionnel)</FieldLabel>
+                <FieldContent>
+                  <KeywordsInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    max={MAX_MOTS_CLES}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Entrée ou virgule pour ajouter. Laissez vide : ils seront générés automatiquement.
+                  </p>
+                </FieldContent>
+                <FieldError errors={[fieldState.error]} />
+              </Field>
             )} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -287,7 +311,7 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
               </Field>
             )} />
 
-            <div className="flex justify-end gap-3 pt-6 pb-2">
+            <div className="grid grid-cols-2 gap-3 pt-6 pb-2">
               <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
                 Annuler
               </Button>

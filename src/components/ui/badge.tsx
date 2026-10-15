@@ -18,6 +18,12 @@ const badgeVariants = cva(
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
+        violet:
+          "bg-[oklch(0.5106_0.2301_276.9656)] text-white [a]:hover:bg-[oklch(0.45_0.23_277)] focus-visible:ring-[oklch(0.5106_0.2301_276.9656)]/40",
+        "violet-soft":
+          "bg-[oklch(0.5106_0.2301_276.9656)]/10 text-[oklch(0.45_0.23_277)] [a]:hover:bg-[oklch(0.5106_0.2301_276.9656)]/20 dark:bg-[oklch(0.5106_0.2301_276.9656)]/20 dark:text-[oklch(0.78_0.13_277)] dark:[a]:hover:bg-[oklch(0.5106_0.2301_276.9656)]/30",
+        "violet-outline":
+          "border-[oklch(0.5106_0.2301_276.9656)]/40 text-[oklch(0.45_0.23_277)] [a]:hover:bg-[oklch(0.5106_0.2301_276.9656)]/10 dark:text-[oklch(0.78_0.13_277)]",
       },
     },
     defaultVariants: {

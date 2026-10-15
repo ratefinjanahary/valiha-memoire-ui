@@ -183,30 +183,30 @@ export function EncadreurCombobox({
         isItemEqualToValue={(a: Item, b: Item) => a.id === b.id}
         disabled={disabled}
       >
-        <ComboboxChips ref={anchor}>
-          <ComboboxValue>
-            {(selected: Item[]) => (
-              <Fragment>
-                {selected.map((e) => (
-                  <ComboboxChip key={e.id}>{formatEncadreur(e)}</ComboboxChip>
-                ))}
-                <ComboboxChipsInput
-                  id={id}
-                  onBlur={onBlur}
-                  placeholder={
-                    isFull
-                      ? `Maximum atteint (${max})`
-                      : selected.length === 0
-                        ? placeholder
-                        : isSingle
-                          ? "Changer d'encadreur..."
-                          : ""
-                  }
-                />
-              </Fragment>
-            )}
-          </ComboboxValue>
-        </ComboboxChips>
+      <ComboboxChips ref={anchor} className="flex-wrap">
+        <ComboboxValue>
+          {(selected: Item[]) => (
+            <Fragment>
+              <ComboboxChipsInput
+                id={id}
+                onBlur={onBlur}
+                // input sur sa propre ligne, au-dessus des chips
+                className="order-first basis-full min-w-full"
+                placeholder={
+                  isFull
+                    ? `Maximum atteint (${max})`
+                    : selected.length === 0 || !isSingle
+                      ? placeholder
+                      : "Changer d'encadreur..."
+                }
+              />
+              {selected.map((e) => (
+                <ComboboxChip key={e.id}>{formatEncadreur(e)}</ComboboxChip>
+              ))}
+            </Fragment>
+          )}
+        </ComboboxValue>
+      </ComboboxChips>
 
         <ComboboxContent anchor={anchor}>
           <ComboboxEmpty>{isLoading ? "Recherche..." : "Aucun encadreur trouvé."}</ComboboxEmpty>
