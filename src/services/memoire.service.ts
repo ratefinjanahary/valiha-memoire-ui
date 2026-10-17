@@ -1,5 +1,14 @@
 import { api } from '@/lib/api';
-import { Memoire, MemoireSearchResponse, Universite, Domaine, TopMemoire } from '@/types/memoire';
+import {
+  Memoire,
+  MemoireSearchResponse,
+  Universite,
+  Domaine,
+  TopMemoire,
+  StatutMemoire,
+  UpdateMemoirePayload,
+  PaginationMeta,
+} from '@/types/memoire';
 
 export const memoireService = {
   
@@ -51,6 +60,24 @@ export const memoireService = {
     return data;
   },
   
+  // Liste de modération : tous les statuts, ou un seul si `statut` est fourni
+  getModerationList: async (params: { statut?: StatutMemoire; page?: number; limit?: number }) => {
+    const { data } = await api.get<{ data: Memoire[]; meta: PaginationMeta }>('/moderation/memoires', { params });
+    return data;
+  },
+
+  // Modifier un mémoire non validé (BROUILLON, EN_ATTENTE_MODERATION, REJETTE)
+  update: async (id: string, payload: UpdateMemoirePayload) => {
+    const { data } = await api.patch<Memoire>(`/moderation/memoires/${id}`, payload);
+    return data;
+  },
+
+  // Supprimer un mémoire non validé (supprime aussi le PDF)
+  remove: async (id: string) => {
+    const { data } = await api.delete<{ id: string; deleted: boolean }>(`/moderation/memoires/${id}`);
+    return data;
+  },
+
   // Lookups pour les filtres
   getUniversites: async () => {
     const { data } = await api.get<Universite[]>('/universites');

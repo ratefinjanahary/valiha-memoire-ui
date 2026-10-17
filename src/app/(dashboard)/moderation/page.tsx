@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { 
-  Check, X, Loader2, AlertTriangle, 
-  Calendar, GraduationCap, FileText, ExternalLink 
+import { useState, useEffect, useRef } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  Check, Loader2, AlertTriangle,
+  Calendar, GraduationCap, FileText, ExternalLink, Pencil, Trash2,
+  Eye, Clock, CheckCircle2, XCircle, PencilLine,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { memoireService } from "@/services/memoire.service";
-import { Memoire } from "@/types/memoire";
+import { Memoire, StatutMemoire } from "@/types/memoire";
+import { EditMemoireDialog, getApiErrorMessage } from "@/components/memoires/edit-memoire-dialog";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,48 +24,96 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
+
+type StatutFilter = StatutMemoire | "TOUS";
+
+const FILTERS: { value: StatutFilter; label: string }[] = [
+  { value: "EN_ATTENTE_MODERATION", label: "En attente" },
+  { value: "REJETTE", label: "Rejetés" },
+  { value: "VALIDE", label: "Validés" },
+  { value: "BROUILLON", label: "Brouillons" },
+  { value: "TOUS", label: "Tous" },
+];
+
+// Une seule apparence pour tous les badges : le statut se distingue par son icône
+const STATUT_BADGE: Record<StatutMemoire, { label: string; Icon: LucideIcon }> = {
+  BROUILLON: { label: "Brouillon", Icon: PencilLine },
+  EN_ATTENTE_MODERATION: { label: "En attente", Icon: Clock },
+  VALIDE: { label: "Validé", Icon: CheckCircle2 },
+  REJETTE: { label: "Rejeté", Icon: XCircle },
+};
+
+const EMPTY_MESSAGES: Record<StatutFilter, string> = {
+  EN_ATTENTE_MODERATION: "Tous les mémoires soumis ont été modérés. Bon travail !",
+  REJETTE: "Aucun mémoire rejeté pour le moment.",
+  VALIDE: "Aucun mémoire validé pour le moment.",
+  BROUILLON: "Aucun brouillon pour le moment.",
+  TOUS: "Aucun mémoire enregistré pour le moment.",
+};
 
 export default function ModerationPage() {
   const [memoires, setMemoires] = useState<Memoire[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [statutFilter, setStatutFilter] = useState<StatutFilter>("EN_ATTENTE_MODERATION");
   const [submittingId, setSubmittingId] = useState<string | null>(null);
 
-  // States pour la modale de rejet
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [selectedMemoireId, setSelectedMemoireId] = useState<string | null>(null);
   const [motifRejet, setMotifRejet] = useState("");
 
-  const fetchPendingMemoires = async (currentPage = page) => {
+  const [memoireToEdit, setMemoireToEdit] = useState<Memoire | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  const [memoireToDelete, setMemoireToDelete] = useState<Memoire | null>(null);
+
+
+  // Ignore les réponses obsolètes quand on change vite de filtre/page
+  const requestId = useRef(0);
+
+  const fetchMemoires = async () => {
+    const current = ++requestId.current;
     setIsLoading(true);
     try {
-      const response = await memoireService.getPending(currentPage);
-      // getPending retourne `data` et `meta`
-      setMemoires((response as any).data ?? []);
-      setTotalPages((response as any).meta?.totalPages ?? 1);
+      const response = await memoireService.getModerationList({
+        statut: statutFilter === "TOUS" ? undefined : statutFilter,
+        page,
+      });
+      if (current !== requestId.current) return;
+      setMemoires(response.data ?? []);
+      setTotalPages(response.meta?.totalPages ?? 1);
     } catch (err: any) {
-      console.error("fetch pending:", err);
-      toast.error("Erreur lors de la récupération des mémoires en attente");
+      if (current !== requestId.current) return;
+      console.error("fetch memoires:", err);
+      toast.error("Erreur lors de la récupération des mémoires");
     } finally {
-      setIsLoading(false);
+      if (current === requestId.current) setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPendingMemoires(page);
-  }, [page]);
+    fetchMemoires();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, statutFilter]);
+
+  const changeFilter = (value: StatutFilter) => {
+    if (value === statutFilter) return;
+    setStatutFilter(value);
+    setPage(1);
+  };
 
   const handleValidate = async (id: string) => {
     setSubmittingId(id);
     try {
       await memoireService.updateStatus(id, "VALIDE");
       toast.success("Le mémoire a été validé avec succès");
-      setMemoires((prev) => prev.filter((m) => m.id !== id));
+      await fetchMemoires();
     } catch (err: any) {
       console.error("validate memoire:", err);
-      toast.error(err.response?.data?.message || "Erreur lors de la validation du mémoire");
+      toast.error(getApiErrorMessage(err, "Erreur lors de la validation du mémoire"));
     } finally {
       setSubmittingId(null);
     }
@@ -86,14 +137,41 @@ export default function ModerationPage() {
     try {
       await memoireService.updateStatus(selectedMemoireId, "REJETTE", motifRejet);
       toast.success("Le mémoire a été rejeté");
-      // Mettre à jour la liste locale
-      setMemoires((prev) => prev.filter((m) => m.id !== selectedMemoireId));
+      await fetchMemoires();
     } catch (err: any) {
       console.error("reject memoire:", err);
-      toast.error(err.response?.data?.message || "Erreur lors du rejet du mémoire");
+      toast.error(getApiErrorMessage(err, "Erreur lors du rejet du mémoire"));
     } finally {
       setSubmittingId(null);
       setSelectedMemoireId(null);
+    }
+  };
+
+  const openEditDialog = (memoire: Memoire) => {
+    setMemoireToEdit(memoire);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!memoireToDelete) return;
+    const { id } = memoireToDelete;
+
+    setSubmittingId(id);
+    setMemoireToDelete(null);
+    try {
+      await memoireService.remove(id);
+      toast.success("Le mémoire a été supprimé");
+      // Dernière carte de la page : on recule d'une page (l'effet recharge la liste)
+      if (memoires.length === 1 && page > 1) {
+        setPage((p) => p - 1);
+      } else {
+        await fetchMemoires();
+      }
+    } catch (err: any) {
+      console.error("delete memoire:", err);
+      toast.error(getApiErrorMessage(err, "Erreur lors de la suppression du mémoire"));
+    } finally {
+      setSubmittingId(null);
     }
   };
 
@@ -103,8 +181,23 @@ export default function ModerationPage() {
       <div>
         <h1 className="text-xl font-bold tracking-tight">Modération des Mémoires</h1>
         <p className="text-muted-foreground text-sm">
-          Validez ou rejetez les mémoires en attente de modération. Les mémoires validés seront visibles par le public.
+          Validez, rejetez, modifiez ou supprimez les mémoires. Seuls les mémoires validés sont visibles par le public,
+          et un mémoire validé ne peut plus être modifié ni supprimé.
         </p>
+      </div>
+
+      {/* Filtre par statut */}
+      <div className="flex flex-wrap gap-2">
+        {FILTERS.map((f) => (
+          <Button
+            key={f.value}
+            variant={statutFilter === f.value ? "secondary" : "outline"}
+            onClick={() => changeFilter(f.value)}
+            className="px-4"
+          >
+            {f.label}
+          </Button>
+        ))}
       </div>
 
       {/* Liste des mémoires */}
@@ -118,103 +211,171 @@ export default function ModerationPage() {
             <Check className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="font-semibold text-lg">Aucun mémoire en attente</h3>
-            <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-              Tous les mémoires soumis ont été modérés. Bon travail !
-            </p>
+            <h3 className="font-semibold text-lg">Aucun mémoire</h3>
+            <p className="text-muted-foreground text-sm max-w-sm mx-auto">{EMPTY_MESSAGES[statutFilter]}</p>
           </div>
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols lg:grid-cols-3 gap-6">
-            {memoires.map((memoire) => (
-              <Card key={memoire.id} className="overflow-hidden flex flex-col h-full">
-                <div className="flex-1 p-6 flex flex-col">
-                  <div>
-                    {/* Tags et Année */}
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
-                      <Badge variant="secondary" className="font-semibold lowercase bg-primary/10 text-primary">
-                        {memoire.typeDiplome}
-                      </Badge>
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        <Calendar className="w-3 h-3 mr-1" />
-                        {memoire.anneeSoutenance}
-                      </div>
-                      {memoire.universite && (
-                        <Badge variant="outline" className="text-xs">
-                          {memoire.universite.nom} ({memoire.universite.sigle})
-                        </Badge>
-                      )}
-                    </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {memoires.map((memoire) => {
+              const { label, Icon } = STATUT_BADGE[memoire.statut];
+              const isValide = memoire.statut === "VALIDE";
+              const canModerate = memoire.statut === "EN_ATTENTE_MODERATION";
+              const canRevalidate = memoire.statut === "REJETTE";
 
-                    {/* Titre */}
-                    <h3 className="font-bold text-md text-foreground mb-2">
-                      {memoire.titre}
-                    </h3>
-
-                    {/* Auteur */}
-                    <div className="text-sm text-muted-foreground flex items-center mb-4">
-                      <GraduationCap className="w-4 h-4 mr-2 text-primary" />
-                      <span>
-                        Auteur : <strong className="text-foreground">{memoire.auteurPrenom} {memoire.auteurNom}</strong>
-                      </span>
-                    </div>
-
-                    {/* Résumé */}
-                    <div className="bg-muted/50 p-4 rounded-md mb-4 text-sm text-muted-foreground max-h-40 overflow-y-auto border border-muted">
-                      <p className="font-semibold text-foreground/80 mb-1 flex items-center">
-                        <FileText className="w-4 h-4 mr-1.5" /> Résumé :
-                      </p>
-                      {memoire.resume || "Aucun résumé fourni."}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex flex-col gap-3 mt-auto pt-4 border-t">
-                    {/* Document PDF si URL fournie */}
+              return (
+                <Card key={memoire.id} className="overflow-hidden flex flex-col h-full">
+                  <div className="flex-1 p-6 flex flex-col">
                     <div>
-                      {(memoire as any).pdfUrl ? (
-                        <a
-                          href={(memoire as any).pdfUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center text-xs font-semibold text-primary hover:underline"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5 mr-1" /> Voir le document PDF
-                        </a>
-                      ) : (
-                        <span className="text-xs text-muted-foreground italic">Aucun fichier PDF rattaché</span>
-                      )}
+                      {/* Statut, tags et année */}
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <Badge variant="outline" className="font-semibold gap-1">
+                          <Icon className="w-3.5 h-3.5" />
+                          {label}
+                        </Badge>
+                        <Badge variant="outline" className="font-semibold lowercase">
+                          {memoire.typeDiplome}
+                        </Badge>
+                        {memoire.universite && (
+                          <Badge variant="outline" className="font-semibold">
+                            {memoire.universite.sigle}
+                          </Badge>
+                        )}
+                        <div className="flex items-center text-xs text-muted-foreground">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          {memoire.anneeSoutenance}
+                        </div>
+                      </div>
+
+                      {/* Titre */}
+                      <h3 className="font-bold text-md text-foreground mb-2">{memoire.titre}</h3>
+
+                      {/* Auteur */}
+                      <div className="text-sm text-muted-foreground flex items-center mb-4">
+                        <GraduationCap className="w-4 h-4 mr-2 text-primary" />
+                        <span>
+                          Auteur :{" "}
+                          <strong className="text-foreground">
+                            {memoire.auteurPrenom} {memoire.auteurNom}
+                          </strong>
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        disabled={submittingId !== null}
-                        onClick={() => openRejectDialog(memoire.id)}
-                        className="flex-1"
-                      >
-                        Rejeter
-                      </Button>
-                      <Button
-                        variant="default"
-                        disabled={submittingId !== null}
-                        onClick={() => handleValidate(memoire.id)}
-                        className="flex-1"
-                      >
-                        {submittingId === memoire.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                    {/* Actions */}
+                    <div className="flex flex-col gap-3 mt-auto pt-4 border-t">
+                      <div className="flex items-center justify-between gap-2">
+                        {memoire.pdfUrl ? (
+                          <a
+                            href={memoire.pdfUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center text-xs font-semibold text-primary hover:underline"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 mr-1" /> Voir le document PDF
+                          </a>
                         ) : (
-                          <>
-                            Valider
-                          </>
+                          <span className="text-xs text-muted-foreground italic">Aucun fichier PDF rattaché</span>
                         )}
-                      </Button>
+
+                        <div className="flex gap-1">
+                          <Popover>
+                            <PopoverTrigger 
+                              render={
+                                <Button variant="ghost" size="icon" title="Voir le résumé et les détails">
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                              }
+                            />
+                            <PopoverContent align="end" className="w-100 max-w-[90vw] max-h-[70vh] overflow-y-auto space-y-3">
+                              <div className="space-y-1">
+                                <Badge variant="outline" className="font-semibold gap-1">
+                                  <Icon className="w-3.5 h-3.5" />
+                                  {label}
+                                </Badge>
+                                <h4 className="font-semibold leading-snug">{memoire.titre}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  {memoire.auteurPrenom} {memoire.auteurNom}
+                                </p>
+                              </div>
+
+                              {memoire.statut === "REJETTE" && memoire.motifRejet && (
+                                <div className="bg-destructive/5 border border-destructive/5 p-3 rounded-md text-sm text-destructive">
+                                  <p className="mb-0.5 flex items-center">
+                                    <XCircle className="w-4 h-4 mr-1.5" /> Motif du rejet :
+                                  </p>
+                                  {memoire.motifRejet}
+                                </div>
+                              )}
+
+                              <div className="bg-muted/50 p-3 rounded-md text-sm text-muted-foreground border border-muted">
+                                <p className="font-semibold text-foreground/80 mb-1 flex items-center">
+                                  <FileText className="w-4 h-4 mr-1.5" /> Résumé :
+                                </p>
+                                {memoire.resume || "Aucun résumé fourni."}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                          {!isValide && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Modifier"
+                                disabled={submittingId !== null}
+                                onClick={() => openEditDialog(memoire)}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Supprimer"
+                                className="text-destructive hover:text-destructive"
+                                disabled={submittingId !== null}
+                                onClick={() => setMemoireToDelete(memoire)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {(canModerate || canRevalidate) && (
+                        <div className="flex gap-2">
+                          {canModerate && (
+                            <Button
+                              variant="outline"
+                              disabled={submittingId !== null}
+                              onClick={() => openRejectDialog(memoire.id)}
+                              className="flex-1"
+                            >
+                              Rejeter
+                            </Button>
+                          )}
+                          <Button
+                            variant="default"
+                            disabled={submittingId !== null}
+                            onClick={() => handleValidate(memoire.id)}
+                            className="flex-1"
+                          >
+                            {submittingId === memoire.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : canRevalidate ? (
+                              "Valider quand même"
+                            ) : (
+                              "Valider"
+                            )}
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
 
           {/* Pagination simple si applicable */}
@@ -244,6 +405,40 @@ export default function ModerationPage() {
         </div>
       )}
 
+      {/* Dialogue de modification */}
+      <EditMemoireDialog
+        memoire={memoireToEdit}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSaved={fetchMemoires}
+      />
+
+      {/* Dialogue de confirmation de suppression */}
+      <Dialog open={memoireToDelete !== null} onOpenChange={(o) => !o && setMemoireToDelete(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex items-center justify-center w-10 h-10 rounded-md bg-destructive/10 shrink-0">
+                <Trash2 className="h-5 w-5 text-destructive" />
+              </div>
+              <DialogTitle>Supprimer le mémoire</DialogTitle>
+            </div>
+            <DialogDescription>
+              « {memoireToDelete?.titre} » sera supprimé définitivement, avec son fichier PDF. Cette action est
+              irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMemoireToDelete(null)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Dialogue de motif de rejet */}
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
         <DialogContent className="max-w-md">
@@ -255,7 +450,8 @@ export default function ModerationPage() {
               <DialogTitle>Rejeter le mémoire</DialogTitle>
             </div>
             <DialogDescription>
-              Veuillez saisir le motif du rejet. Ce motif sera enregistré et envoyé à l'utilisateur ayant soumis le mémoire.
+              Veuillez saisir le motif du rejet. Ce motif sera enregistré et envoyé à l&apos;utilisateur ayant soumis le
+              mémoire.
             </DialogDescription>
           </DialogHeader>
 
@@ -269,17 +465,10 @@ export default function ModerationPage() {
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsRejectDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>
               Annuler
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleRejectConfirm}
-              disabled={!motifRejet.trim()}
-            >
+            <Button variant="destructive" onClick={handleRejectConfirm} disabled={!motifRejet.trim()}>
               Confirmer le rejet
             </Button>
           </DialogFooter>

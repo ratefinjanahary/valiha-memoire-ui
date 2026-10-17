@@ -57,16 +57,25 @@ export interface CreateEncadreurPayload {
   email?: string;
 }
 
+export type StatutMemoire = "BROUILLON" | "EN_ATTENTE_MODERATION" | "VALIDE" | "REJETTE";
+export type TypeDiplome = "LICENCE" | "MASTER" | "DOCTORAT";
+
 export interface Memoire {
   id: string;
   titre: string;
   resume: string;
   anneeSoutenance: number;
-  typeDiplome: "LICENCE" | "MASTER" | "DOCTORAT";
+  typeDiplome: TypeDiplome;
   auteurNom: string;
   auteurPrenom: string;
-  statut: "BROUILLON" | "EN_ATTENTE_MODERATION" | "VALIDE" | "REJETTE";
+  auteurEmail?: string | null;
+  statut: StatutMemoire;
+  motifRejet?: string | null;
   pdfUrl?: string;
+  universiteId?: string;
+  domaineId?: string;
+  auteurEncadreurId?: string | null;
+  soumisPar?: { nom: string; prenom: string; email: string };
   universite?: Universite;
   domaine?: Domaine;
   motsCles?: { motCle: MotCle }[];
@@ -84,6 +93,23 @@ export interface MemoireSearchResponse {
     limit: number;
     totalPages: number;
   };
+}
+
+/** Corps de PATCH /moderation/memoires/:id — tous les champs sont optionnels (au moins un requis) */
+export interface UpdateMemoirePayload {
+  titre?: string;
+  resume?: string;
+  anneeSoutenance?: number;
+  typeDiplome?: TypeDiplome;
+  auteurNom?: string;
+  auteurPrenom?: string;
+  auteurEmail?: string | null;
+  universiteId?: string;
+  domaineId?: string;
+  auteurEncadreurId?: string | null;
+  encadreurIds?: string[];
+  /** Remplace la liste. Tableau vide => régénération automatique côté serveur */
+  motsCles?: string[];
 }
 
 export interface TopMemoire {
