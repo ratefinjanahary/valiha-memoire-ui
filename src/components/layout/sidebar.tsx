@@ -11,9 +11,11 @@ import {
   GraduationCap,
   Menu,
   LogOut, 
+  Pencil,
   User,  
   LibraryBig , 
   Users, 
+  AlertTriangle,
   Trash2, 
   type LucideIcon
 } from "lucide-react";
@@ -21,7 +23,16 @@ import { useUiStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { EditProfileDialog } from "@/components/users/edit-profile-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +45,7 @@ import { useEffect, useState } from "react";
 
 import { authService } from "@/services/auth.service";
 import { toast } from "sonner";
+import { Spinner } from "../ui/spinner";
 
 interface NavLink {
   name: string;
@@ -72,12 +84,13 @@ interface SidebarContentProps {
   expanded: boolean;
   pathname: string;
   onNavigate?: () => void;
+  onEditProfile: () => void;
   onDeleteProfile: () => void;
   onLogout: () => void;
 }
 
 const SidebarContent: React.FC<SidebarContentProps> = ({
-  expanded, pathname, onNavigate, onDeleteProfile, onLogout,
+  expanded, pathname, onNavigate, onEditProfile, onDeleteProfile, onLogout,
 }) => {
   const { user } = useAuthStore();
 
@@ -144,6 +157,10 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
                 </div>
               </DropdownMenuLabel>
             </DropdownMenuGroup>
+            <DropdownMenuItem onClick={onEditProfile}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Modifier mon profil
+            </DropdownMenuItem>
             <DropdownMenuItem className="text-destructive hover:text-destructive hover:bg-none" onClick={onDeleteProfile}>
               <Trash2 className="h-4 w-4 mr-2" />
               Supprimer mon compte
@@ -169,19 +186,116 @@ export const Sidebar: React.FC = () => {
   const [showDeleteProfileDialog, setShowDeleteProfileDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [showEditProfileDialog, setShowEditProfileDialog] = useState(false);
+  const openEditProfile = () => { setMobileSidebarOpen(false); setShowEditProfileDialog(true); }
+
   // Ferme le drawer à chaque changement de route
   useEffect(() => {
     setMobileSidebarOpen(false);
   }, [pathname, setMobileSidebarOpen]);
 
-  // handleLogoutConfirm / handleDeleteProfileConfirm inchangés
+  const handleLogoutConfirm = () => {
+    logout();
+    setShowLogoutDialog(false);
+    router.push("/");
+  };
+
+  const handleDeleteProfileConfirm = async () => {
+    if (!user) return;
+    setIsDeleting(true);
+    try {
+      await authService.deleteUser(user.id);
+      toast.success("Votre compte a été supprimé avec succès.");
+      logout();
+      router.push("/");
+    } catch (err: any) {
+      console.error("delete profile error:", err);
+      toast.error("Une erreur est survenue lors de la suppression de votre compte.");
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteProfileDialog(false);
+    }
+  };
 
   const openDelete = () => { setMobileSidebarOpen(false); setShowDeleteProfileDialog(true); };
   const openLogout = () => { setMobileSidebarOpen(false); setShowLogoutDialog(true); };
 
   return (
     <>
-      {/* ...les 2 Dialogs inchangés... */}
+      {/* Delete Profile Confirmation Dialog */}
+      <Dialog open={showDeleteProfileDialog} onOpenChange={setShowDeleteProfileDialog}>
+        <DialogContent showCloseButton={false} className="max-w-sm">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex items-center justify-center w-10 h-10 rounded-md bg-destructive/10 shrink-0">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <DialogTitle>Supprimer mon compte</DialogTitle>
+            </div>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est définitive et toutes vos données seront perdues.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => setShowDeleteProfileDialog(false)}
+              disabled={isDeleting}
+            >
+              Annuler
+            </Button>
+            <Button
+              size="lg"
+              variant="destructive"
+              onClick={handleDeleteProfileConfirm}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Spinner className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              {isDeleting ? "Suppression..." : "Confirmer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Logout Confirmation Dialog */}
+      <Dialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <DialogContent showCloseButton={false} className="max-w-sm">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex items-center justify-center w-10 h-10 rounded-md bg-destructive/10 shrink-0">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <DialogTitle>Confirmer la déconnexion</DialogTitle>
+            </div>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir vous déconnecter ? Votre session sera terminée et vous serez redirigé vers la page d'accueil.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => setShowLogoutDialog(false)}
+            >
+              Annuler
+            </Button>
+            <Button
+              size="lg"
+              variant="destructive"
+              onClick={handleLogoutConfirm}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Se déconnecter
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <EditProfileDialog open={showEditProfileDialog} onOpenChange={setShowEditProfileDialog} />
 
       {/* Desktop : caché sur mobile */}
       <motion.aside
@@ -193,6 +307,7 @@ export const Sidebar: React.FC = () => {
         <SidebarContent
           expanded={isSidebarOpen}
           pathname={pathname}
+          onEditProfile={openEditProfile}
           onDeleteProfile={openDelete}
           onLogout={openLogout}
         />
@@ -222,6 +337,7 @@ export const Sidebar: React.FC = () => {
                 expanded
                 pathname={pathname}
                 onNavigate={() => setMobileSidebarOpen(false)}
+                onEditProfile={openEditProfile}
                 onDeleteProfile={openDelete}
                 onLogout={openLogout}
               />

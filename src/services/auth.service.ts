@@ -1,5 +1,6 @@
 import { api } from '@/lib/api';
 import { User } from '@/stores/authStore';
+import { UpdateProfilePayload } from '@/lib/validators/profile';
 
 export const authService = {
   login: async (credentials: { email: string; password: string }) => {
@@ -26,6 +27,11 @@ export const authService = {
 
   updateRole: async (id: string, role: string) => {
     const { data } = await api.put<User>(`/users/${id}/role`, { role });
+    return data;
+  },
+
+  updateProfile: async (payload: UpdateProfilePayload) => {
+    const { data } = await api.patch<{ access_token: string; user: User }>('/users/profile', payload);
     return data;
   },
 
