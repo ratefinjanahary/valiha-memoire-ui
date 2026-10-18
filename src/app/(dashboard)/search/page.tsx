@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles, TrendingUp, Search, WandSparkles } from "lucide-react";
+import { Sparkles, ChevronsUp, Search, WandSparkles } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -151,7 +151,9 @@ export default function SemanticSearchPage() {
       {/* Bandeau tendances — sorti du grid des résultats */}
       <motion.section variants={v.fadeUp} className="rounded-md border px-5 py-4">
         <motion.div variants={v.slideInLeft} className="flex items-center gap-3 mb-3">
-          <TrendingUp className="h-4 w-4 text-primary" />
+          <div className="bg-primary/10 text-primary p-1.5 rounded-sm">
+            <ChevronsUp className="h-4 w-4 text-primary" />
+          </div>
           <h2
             id="trending-title"
             className="font-semibold text-muted-foreground"
@@ -170,7 +172,7 @@ export default function SemanticSearchPage() {
             {trending.map((t, i) => (
               <motion.div key={t.motCleId} variants={v.pop}>
                 <Badge
-                  variant="violet-soft"
+                  variant="outline"
                   className="cursor-pointer hover:bg-primary/20 transition-colors"
                   onClick={() => handleKeywordClick(t.libelle)}
                 >
@@ -284,17 +286,3 @@ export default function SemanticSearchPage() {
     </motion.div>
   );
 }
-
-
-/* Composant inline : carte resultat */
-const degreeVariant: Record<string, "default" | "secondary" | "outline"> = {
-  LICENCE: "secondary",
-  MASTER: "default",
-  DOCTORAT: "outline",
-};
-
-const degreeLabel: Record<string, string> = {
-  LICENCE: "Licence",
-  MASTER: "Master",
-  DOCTORAT: "Doctorat",
-};

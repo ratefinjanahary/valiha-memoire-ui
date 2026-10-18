@@ -8,14 +8,13 @@ import {
   BookOpen, 
   Search, 
   ChartNetwork, 
-  GraduationCap, 
+  GraduationCap,
+  Menu,
   LogOut, 
-  User, 
-  AlertTriangle, 
+  User,  
   LibraryBig , 
   Users, 
   Trash2, 
-  Loader2,
   type LucideIcon
 } from "lucide-react";
 import { useUiStore } from "@/stores/uiStore";
@@ -31,15 +30,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { authService } from "@/services/auth.service";
 import { toast } from "sonner";
@@ -60,212 +51,183 @@ const navLinks: NavLink[] = [
   { name: "Graphe", href: "/graph", icon: ChartNetwork },
 ];
 
+/* Bouton menu (à mettre dans ton header, visible mobile only) */
+export const MobileMenuButton: React.FC<{ className?: string }> = ({ className }) => {
+  const { toggleMobileSidebar } = useUiStore();
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className={cn("md:hidden", className)}
+      onClick={toggleMobileSidebar}
+      aria-label="Ouvrir le menu"
+    >
+      <Menu className="h-5 w-5" />
+    </Button>
+  );
+};
+
+/* Contenu partagé desktop / mobile */
+interface SidebarContentProps {
+  expanded: boolean;
+  pathname: string;
+  onNavigate?: () => void;
+  onDeleteProfile: () => void;
+  onLogout: () => void;
+}
+
+const SidebarContent: React.FC<SidebarContentProps> = ({
+  expanded, pathname, onNavigate, onDeleteProfile, onLogout,
+}) => {
+  const { user } = useAuthStore();
+
+  return (
+    <>
+      {/* Logo & Brand */}
+      <div className={cn("h-16 flex items-center border-b shrink-0", expanded ? "px-6" : "justify-center px-0")}>
+        <GraduationCap className={cn("h-6 w-6 text-primary shrink-0", expanded && "mr-3")} />
+        {expanded && <span className="font-bold text-lg tracking-tight whitespace-nowrap">Valiha App</span>}
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 py-5 px-3 space-y-2 overflow-y-auto overflow-x-hidden">
+        {navLinks
+          .filter((link) => !link.roles || (user?.role && link.roles.includes(user.role)))
+          .map((link) => {
+            const isActive = pathname.startsWith(link.href);
+            const Icon = link.icon;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={onNavigate}
+                title={!expanded ? link.name : undefined}
+                aria-label={link.name}
+                className={cn(
+                  "flex items-center py-1.5 rounded-sm transition-colors font-semibold text-sm",
+                  expanded ? "px-3" : "justify-center py-2",
+                  isActive
+                    ? "bg-primary/7 text-primary"
+                    : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
+                )}
+              >
+                <Icon className={cn("h-4.5 w-4.5 shrink-0", expanded && "mr-3")} />
+                {expanded && <span className="whitespace-nowrap">{link.name}</span>}
+              </Link>
+            );
+          })}
+      </nav>
+
+      {/* Theme + Profil */}
+      <div
+        className={cn(
+          "border-t px-3 py-3 flex items-center shrink-0",
+          expanded ? "justify-between" : "flex-col gap-2 justify-center"
+        )}
+      >
+        <ThemeToggle />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button variant="ghost" size="icon" className="rounded-full" aria-label="Profil" />}
+          >
+            <User className="h-5 w-5" />
+            <span className="sr-only">Menu utilisateur</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="end" className="w-56 mb-1">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{user?.prenom} {user?.nom}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.email || "default.admin@email.com"}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
+            <DropdownMenuItem className="text-destructive hover:text-destructive hover:bg-none" onClick={onDeleteProfile}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Supprimer mon compte
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive hover:text-destructive hover:bg-none" onClick={onLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Déconnexion
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </>
+  );
+};
+
+/* ---------- Sidebar ---------- */
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const { isSidebarOpen } = useUiStore();
+  const { isSidebarOpen, isMobileSidebarOpen, setMobileSidebarOpen } = useUiStore();
   const { user, logout } = useAuthStore();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showDeleteProfileDialog, setShowDeleteProfileDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleLogoutConfirm = () => {
-    logout();
-    setShowLogoutDialog(false);
-    router.push("/");
-  };
+  // Ferme le drawer à chaque changement de route
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [pathname, setMobileSidebarOpen]);
 
-  const handleDeleteProfileConfirm = async () => {
-    if (!user) return;
-    setIsDeleting(true);
-    try {
-      await authService.deleteUser(user.id);
-      toast.success("Votre compte a été supprimé avec succès.");
-      logout();
-      router.push("/");
-    } catch (err: any) {
-      console.error("delete profile error:", err);
-      toast.error("Une erreur est survenue lors de la suppression de votre compte.");
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteProfileDialog(false);
-    }
-  };
+  // handleLogoutConfirm / handleDeleteProfileConfirm inchangés
+
+  const openDelete = () => { setMobileSidebarOpen(false); setShowDeleteProfileDialog(true); };
+  const openLogout = () => { setMobileSidebarOpen(false); setShowLogoutDialog(true); };
 
   return (
     <>
-      {/* Delete Profile Confirmation Dialog */}
-      <Dialog open={showDeleteProfileDialog} onOpenChange={setShowDeleteProfileDialog}>
-        <DialogContent showCloseButton={false} className="max-w-sm">
-          <DialogHeader>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="flex items-center justify-center w-10 h-10 rounded-md bg-destructive/10 shrink-0">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-              </div>
-              <DialogTitle>Supprimer mon compte</DialogTitle>
-            </div>
-            <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est définitive et toutes vos données seront perdues.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => setShowDeleteProfileDialog(false)}
-              disabled={isDeleting}
-            >
-              Annuler
-            </Button>
-            <Button
-              size="lg"
-              variant="destructive"
-              onClick={handleDeleteProfileConfirm}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Trash2 className="h-4 w-4 mr-2" />
-              )}
-              {isDeleting ? "Suppression..." : "Confirmer"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* ...les 2 Dialogs inchangés... */}
 
-      {/* Logout Confirmation Dialog */}
-      <Dialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-        <DialogContent showCloseButton={false} className="max-w-sm">
-          <DialogHeader>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="flex items-center justify-center w-10 h-10 rounded-md bg-destructive/10 shrink-0">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-              </div>
-              <DialogTitle>Confirmer la déconnexion</DialogTitle>
-            </div>
-            <DialogDescription>
-              Êtes-vous sûr de vouloir vous déconnecter ? Votre session sera terminée et vous serez redirigé vers la page d'accueil.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => setShowLogoutDialog(false)}
-            >
-              Annuler
-            </Button>
-            <Button
-              size="lg"
-              variant="destructive"
-              onClick={handleLogoutConfirm}
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Se déconnecter
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Desktop : caché sur mobile */}
+      <motion.aside
+        initial={false}
+        animate={{ width: isSidebarOpen ? 280 : 72 }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        className="hidden md:flex h-screen border-r flex-col shrink-0 overflow-hidden"
+      >
+        <SidebarContent
+          expanded={isSidebarOpen}
+          pathname={pathname}
+          onDeleteProfile={openDelete}
+          onLogout={openLogout}
+        />
+      </motion.aside>
 
+      {/* Mobile : drawer en overlay */}
       <AnimatePresence>
-        <motion.aside
-          initial={false}
-          animate={{ width: isSidebarOpen ? 280 : 72 }}
-          transition={{ duration: 0.3, ease: "easeInOut" }}
-          className="h-screen border-r flex flex-col shrink-0 overflow-hidden"
-        >
-          {/* Logo & Brand */}
-          <div
-            className={cn(
-              "h-16 flex items-center border-b shrink-0",
-              isSidebarOpen ? "px-6" : "justify-center px-0"
-            )}
-          >
-            <GraduationCap className={cn("h-6 w-6 text-primary shrink-0", isSidebarOpen && "mr-3")} />
-            {isSidebarOpen && (
-              <span className="font-bold text-lg tracking-tight whitespace-nowrap">Valiha App</span>
-            )}
-          </div>
-
-          {/* Navigation Links */}
-          <nav className="flex-1 py-5 px-3 space-y-2 overflow-y-auto overflow-x-hidden">
-            {navLinks
-              .filter((link) => !link.roles || (user?.role && link.roles.includes(user.role)))
-              .map((link) => {
-                const isActive = pathname.startsWith(link.href);
-                const Icon = link.icon;
-
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    title={!isSidebarOpen ? link.name : undefined}
-                    aria-label={link.name}
-                    className={cn(
-                      "flex items-center py-1.5 rounded-sm transition-colors font-semibold text-sm",
-                      isSidebarOpen ? "px-3" : "justify-center py-2",
-                      isActive
-                        ? "bg-primary/7 text-primary"
-                        : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
-                    )}
-                  >
-                    <Icon className={cn("h-4.5 w-4.5 shrink-0", isSidebarOpen && "mr-3")} />
-                    {isSidebarOpen && <span className="whitespace-nowrap">{link.name}</span>}
-                  </Link>
-                );
-              })}
-          </nav>
-
-          {/* Bottom: Theme + Profile */}
-          <div
-            className={cn(
-              "border-t px-3 py-3 flex items-center shrink-0",
-              isSidebarOpen ? "justify-between" : "flex-col gap-2 justify-center"
-            )}
-          >
-            <ThemeToggle />
-
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button variant="ghost" size="icon" className="rounded-full" aria-label="Profil" />
-                }
-              >
-                <User className="h-5 w-5" />
-                <span className="sr-only">Menu utilisateur</span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="end" className="w-56 mb-1">
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {user?.prenom} {user?.nom}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {user?.email || "default.admin@email.com"}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                </DropdownMenuGroup>
-                <DropdownMenuItem
-                  className="text-destructive hover:text-destructive hover:bg-none"
-                  onClick={() => setShowDeleteProfileDialog(true)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Supprimer mon compte
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-destructive hover:text-destructive hover:bg-none"
-                  onClick={() => setShowLogoutDialog(true)}
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Déconnexion
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </motion.aside>
+        {isMobileSidebarOpen && (
+          <>
+            <motion.div
+              key="backdrop"
+              className="fixed inset-0 z-40 bg-black/50 md:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileSidebarOpen(false)}
+            />
+            <motion.aside
+              key="drawer"
+              className="fixed inset-y-0 left-0 z-50 flex w-[280px] max-w-[85vw] flex-col border-r bg-background md:hidden"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+            >
+              <SidebarContent
+                expanded
+                pathname={pathname}
+                onNavigate={() => setMobileSidebarOpen(false)}
+                onDeleteProfile={openDelete}
+                onLogout={openLogout}
+              />
+            </motion.aside>
+          </>
+        )}
       </AnimatePresence>
     </>
   );

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import {
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -21,7 +21,7 @@ import { XCircle, LucideIcon, BookCheck, BookAlert, BookSearch } from "lucide-re
 import { analyticsService } from "@/services/analytics.service";
 import { memoireService } from "@/services/memoire.service";
 import { TopMemoire } from "@/types/memoire";
-import { TopMemoiresTreemap } from "@/components/dashboard/top-memoires-treemap";
+import { TopMemoiresBarChart } from "@/components/dashboard/top-memoires-bar-chart";
 import { AuditLogsTable } from "@/components/dashboard/audit-logs-table";
 
 import {
@@ -102,6 +102,27 @@ const kpiConfig: {
     format: (v) => v.toLocaleString(),
   },
 ];
+
+const EvolutionTooltip = ({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+}) => {
+  if (!active || !payload?.length) return null;
+
+  return (
+    <div className="rounded-md border bg-background/95 px-3 py-3 shadow-md backdrop-blur">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-sm font-semibold text-primary">
+        {payload[0].value} mémoire{payload[0].value > 1 ? "s" : ""}
+      </p>
+    </div>
+  );
+};
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -197,20 +218,66 @@ export default function DashboardPage() {
             ) : (
               <div className="h-64 w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={evolutionData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                    <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                    <RechartsTooltip
-                      cursor={{ fill: "rgba(0,0,0,0.05)" }}
-                      contentStyle={{
-                        borderRadius: "8px",
-                        border: "1px solid #eee",
-                      }}
-                      formatter={(value: any) => [value, "Mémoires"]}
+                  <LineChart data={evolutionData} margin={{ top: 10, right: 16, left: -16, bottom: 0 }}>
+                    <CartesianGrid
+                      strokeDasharray="4 6"
+                      vertical={false}
+                      stroke="currentColor"
+                      className="text-muted-foreground"
+                      opacity={0.15}
                     />
-                    <Bar dataKey="count" name="Mémoires" fill="var(--color-primary)" radius={[4, 4, 0, 0]} className="fill-primary" />
-                  </BarChart>
+                    <XAxis
+                      dataKey="name"
+                      stroke="#888888"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={10}
+                    />
+                    <YAxis
+                      stroke="#888888"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      allowDecimals={false}
+                      tickMargin={4}
+                    />
+                    <RechartsTooltip
+                      content={<EvolutionTooltip />}
+                      cursor={{
+                        stroke: "var(--color-primary)",
+                        strokeWidth: 1,
+                        strokeDasharray: "4 4",
+                        opacity: 0.4,
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      name="Mémoires"
+                      stroke="var(--color-primary)"
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                      dot={{
+                        r: 4,
+                        strokeWidth: 2,
+                        stroke: "var(--color-primary)",
+                        fill: "var(--color-background, #fff)",
+                      }}
+                      activeDot={{
+                        r: 7,
+                        strokeWidth: 3,
+                        stroke: "var(--color-primary)",
+                        fill: "var(--color-background, #fff)",
+                      }}
+                      animationDuration={900}
+                      animationEasing="ease-out"
+                      style={{
+                        filter:
+                          "drop-shadow(0 6px 8px color-mix(in srgb, var(--color-primary) 35%, transparent))",
+                      }}
+                    />
+                  </LineChart>
                 </ResponsiveContainer>
               </div>
             )}
@@ -281,15 +348,15 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Treemap — Popularité par domaine */}
-        <Card className="col-span-4 border-muted">
+        {/* Top mémoires — BarChart */}
+        <Card className="sm:col-span-4 col-span-3 border-muted">
           <CardHeader>
-            <CardTitle>Popularité par Domaine</CardTitle>
+            <CardTitle>Mémoires les plus consultés</CardTitle>
             <CardDescription>
-              Regroupement des mémoires les plus consultés par domaine.
+              Top des mémoires par nombre de consultations, coloré par domaine.
             </CardDescription>
           </CardHeader>
-          <CardContent className="px-8 pb-8">
+          <CardContent className="pb-8">
             {error ? (
               <div className="flex h-[400px] items-center justify-center text-sm text-destructive border border-dashed border-destructive/50 rounded-lg bg-destructive/10">
                 {error}
@@ -299,14 +366,14 @@ export default function DashboardPage() {
                 Aucune donnée disponible
               </div>
             ) : (
-              <div className="mx-auto mt-4 h-[400px] w-full md:w-1/2">
-                <TopMemoiresTreemap data={topMemoires} />
+              <div className="mt-4 h-[260px] w-full">
+                <TopMemoiresBarChart data={topMemoires} limit={10} />
               </div>
             )}
           </CardContent>
         </Card>
         {/* Journal d'audit — à droite du treemap */}
-        <div className="col-span-full sm:col-span-4 lg:col-span-3">
+        <div className="col-span-full sm:col-span-4 md:col-span-3">
           <AuditLogsTable  />
         </div>
       </div>

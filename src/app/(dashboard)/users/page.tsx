@@ -1,22 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import {
-  Loader2, Search, Trash2, Shield, UserStar,
-  ChevronLeft, ChevronRight, AlertTriangle, Mail, Calendar,
+  Loader2, Search, SearchX, Trash2, Shield, UserStar, Ellipsis,
+  ChevronLeft, ChevronRight, AlertTriangle,
   BookText, GraduationCap, Globe, CircleCheck, CircleX,
+  type LucideIcon,
 } from "lucide-react";
 import { motion, AnimatePresence, type Variants } from "motion/react";
 import { toast } from "sonner";
 
+import { cn } from "@/lib/utils";
 import { authService } from "@/services/auth.service";
 import { User } from "@/stores/authStore";
 import { useAuthStore } from "@/stores/authStore";
-
-interface AdminUser extends User {
-  isActif?: boolean;
-  createdAt?: string;
-}
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,16 +34,124 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
 
-/* Variants Motion pour l'animation d'entrée progressive */
+interface AdminUser extends User {
+  isActif?: boolean;
+  createdAt?: string;
+}
+
+type RoleMeta = {
+  icon: LucideIcon;
+  label: string;
+  description: string;
+};
+
+/*  Métadonnées des rôles et statuts (à ajuster selon tes vraies règles) */
+
+const ROLES: Record<string, RoleMeta> = {
+  ADMIN: {
+    icon: UserStar,
+    label: "Administrateur",
+    description: "Accès complet : utilisateurs, modération et journal d'audit.",
+  },
+  DOCUMENTALISTE: {
+    icon: BookText,
+    label: "Documentaliste",
+    description: "Gère et modère les mémoires de la bibliothèque.",
+  },
+  ETUDIANT: {
+    icon: GraduationCap,
+    label: "Étudiant",
+    description: "Consulte les mémoires et peut soumettre les siens.",
+  },
+  PUBLIC: {
+    icon: Globe,
+    label: "Public",
+    description: "Visiteur : consultation des mémoires validés uniquement.",
+  },
+};
+
+const getRole = (role?: string): RoleMeta => ROLES[role ?? ""] ?? ROLES.PUBLIC;
+
+const STATUS = {
+  actif: {
+    icon: CircleCheck,
+    label: "Compte actif",
+    description: "L'utilisateur peut se connecter et utiliser l'application.",
+    tone: "text-[#86efac]",
+  },
+  inactif: {
+    icon: CircleX,
+    label: "Compte inactif",
+    description: "L'utilisateur ne peut plus se connecter.",
+    tone: "text-red-600",
+  },
+};
+
+/* ------------------------------------------------------------------ */
+/*  Tooltip : survol sur PC, tap sur mobile                            */
+/* ------------------------------------------------------------------ */
+
+function IconTip({
+  label,
+  description,
+  className,
+  children,
+}: {
+  label: string;
+  description: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Tooltip open={open} onOpenChange={setOpen}>
+      <TooltipTrigger
+        type="button"
+        aria-label={label}
+        className={cn(
+          "inline-flex size-8 shrink-0 items-center justify-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+          className
+        )}
+        onClick={() => {
+          /* Sur écran tactile (pas de hover), un tap ouvre la bulle ;
+             un tap ailleurs la ferme via onOpenChange. */
+          if (window.matchMedia("(hover: none)").matches) setOpen(true);
+        }}
+      >
+        {children}
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-56 space-y-0.5">
+        <p className="font-medium">{label}</p>
+        <p className="opacity-80">{description}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Animations                                                         */
+/* ------------------------------------------------------------------ */
+
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.06,
-      delayChildren: 0.05,
-    },
+    transition: { staggerChildren: 0.06, delayChildren: 0.05 },
   },
 };
 
@@ -56,24 +161,16 @@ const cardVariants: Variants = {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: {
-      type: "spring",
-      stiffness: 260,
-      damping: 22,
-    },
+    transition: { type: "spring", stiffness: 260, damping: 22 },
   },
-  exit: {
-    opacity: 0,
-    scale: 0.95,
-    transition: { duration: 0.15 },
-  },
+  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.15 } },
 };
 
-const roleIcons = {
-  ADMIN: UserStar,
-  DOCUMENTALISTE: BookText,
-  ETUDIANT: GraduationCap,
-  PUBLIC: Globe,
+const formatDate = (iso?: string) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
 };
 
 export default function UsersManagementPage() {
@@ -89,7 +186,7 @@ export default function UsersManagementPage() {
   const [total, setTotal] = useState(0);
   const limit = 10;
 
-  /* Modales et état d'actions */
+  /* Modales */
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -116,6 +213,7 @@ export default function UsersManagementPage() {
 
   useEffect(() => {
     fetchUsers(page, search);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -142,12 +240,13 @@ export default function UsersManagementPage() {
       setUsers((prev) => prev.filter((u) => u.id !== userToDelete.id));
       setTotal((prev) => prev - 1);
       setIsDeleteDialogOpen(false);
+      /* Page vidée : on revient à la précédente */
+      if (users.length === 1 && page > 1) setPage((p) => p - 1);
     } catch (err: any) {
       console.error("delete user error:", err);
       toast.error(err.response?.data?.message || "Erreur lors de la suppression de l'utilisateur");
     } finally {
       setIsDeleting(false);
-      setUserToDelete(null);
     }
   };
 
@@ -162,7 +261,7 @@ export default function UsersManagementPage() {
     setIsUpdatingRole(true);
     try {
       await authService.updateRole(userToModifyRole.id, selectedRole);
-      toast.success(`Le rôle de ${userToModifyRole.prenom} a été mis à jour avec succès en ${selectedRole}`);
+      toast.success(`Le rôle de ${userToModifyRole.prenom} a été mis à jour en ${selectedRole}`);
       setUsers((prev) =>
         prev.map((u) => (u.id === userToModifyRole.id ? { ...u, role: selectedRole as any } : u))
       );
@@ -172,7 +271,6 @@ export default function UsersManagementPage() {
       toast.error(err.response?.data?.message || "Erreur lors de la mise à jour du rôle");
     } finally {
       setIsUpdatingRole(false);
-      setUserToModifyRole(null);
     }
   };
 
@@ -180,284 +278,271 @@ export default function UsersManagementPage() {
     return (
       <div className="flex flex-col items-center justify-center py-24 space-y-4">
         <AlertTriangle className="h-12 w-12 text-destructive" />
-        <h3 className="font-bold text-xl">Accès Refusé</h3>
+        <h3 className="font-bold text-xl">Accès refusé</h3>
         <p className="text-muted-foreground text-sm">Seul un administrateur peut accéder à cette page de gestion.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-lg font-bold tracking-tight">Gestion des Utilisateurs</h1>
-          <p className="text-muted-foreground text-sm">
-            Visualisez les comptes utilisateurs, modifiez leurs rôles d'accès ou supprimez des comptes.
-          </p>
-        </div>
-      </div>
-
-      {/* Search Bar */}
-      <form onSubmit={handleSearchSubmit} className="flex gap-2 max-w-md">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher par nom, prénom, email..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Button type="submit">Rechercher</Button>
-      </form>
-
-      {/* Users Grid */}
-      {isLoading ? (
-        <div className="flex justify-center items-center py-24">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : users.length === 0 ? (
-        <div className="text-center py-16 border rounded-md">
-          <p className="text-muted-foreground text-sm">Aucun utilisateur trouvé.</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <motion.div
-            key={`${page}-${search}`}
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-          >
-            <AnimatePresence mode="popLayout">
-              {users.map((u) => (
-                <motion.div
-                  key={u.id}
-                  variants={cardVariants}
-                  layout
-                  exit="exit"
-                >
-                  <Card className="group relative overflow-hidden p-5 transition-all duration-300 h-full flex flex-col">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold uppercase text-sm shrink-0 ring-2 ring-background">
-                          {u.prenom?.[0]}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-semibold text-sm truncate">
-                              {u.prenom} {u.nom}
-                            </span>
-                            {u.id === currentUser?.id && (
-                              <Badge
-                                variant="outline"
-                              >
-                                Vous
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                            <Mail className="h-3 w-3 shrink-0" />
-                            <span className="truncate">{u.email}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Badges rôle + statut */}
-                    <div className="flex items-center gap-1 flex-wrap">
-                      <Badge variant="outline" className="gap-1">
-                        {(() => {
-                          const Icon = roleIcons[u.role as keyof typeof roleIcons] ?? Globe;
-                          return <Icon className="h-3 w-3" />;
-                        })()}
-                        {u.role}
-                      </Badge>
-
-                      {u.isActif !== false ? (
-                        <Badge variant="outline">
-                          <CircleCheck className="h-3 w-3" />Actif
-                        </Badge>
-                      ) : (
-                        <Badge
-                          className="gap-1 bg-destructive/10 text-destructive hover:bg-destructive/10 border-destructive/20"
-                          variant="outline"
-                        >
-                          <CircleX className="h-3 w-3" />Inactif
-                        </Badge>
-                      )}
-                    </div>
-
-                    {/* Date de création */}
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-                      <Calendar className="h-3.5 w-3.5" />
-                      <span>
-                        Inscrit le{" "}
-                        {new Date(u.createdAt || "").toLocaleDateString("fr-FR", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </span>
-                    </div>
-
-                    {/* Actions (poussées en bas de la carte) */}
-                    <div className="mt-auto flex items-center justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-1.5"
-                        onClick={() => handleOpenRoleChange(u)}
-                      >
-                        <Shield className="h-3.5 w-3.5" />
-                        Rôle
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        disabled={u.id === currentUser?.id}
-                        onClick={() => handleOpenDelete(u)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </Card>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
-
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t pt-4">
-              <span className="text-sm text-muted-foreground">
-                Affichage de {users.length} sur {total} utilisateurs
-              </span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm font-medium">
-                  Page {page} sur {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+    <TooltipProvider>
+      <div className="space-y-6 max-w-7xl mx-auto">
+        {/* En-tête + recherche */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold tracking-tight">Utilisateurs</h1>
+              {!isLoading && <Badge variant="outline">{total}</Badge>}
             </div>
-          )}
-        </div>
-      )}
-
-      {/* Delete User Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="flex items-center justify-center w-10 h-10 rounded-md bg-destructive/10 shrink-0">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-              </div>
-              <DialogTitle>Supprimer le compte</DialogTitle>
-            </div>
-            <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer l'utilisateur{" "}
-              <span className="font-semibold text-foreground">
-                {userToDelete?.prenom} {userToDelete?.nom} ({userToDelete?.email})
-              </span>{" "}
-              ?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-1">
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-              disabled={isDeleting}
-            >
-              Annuler
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Suppression...
-                </>
-              ) : (
-                "Oui, supprimer"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Change Role Dialog */}
-      <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10 shrink-0">
-                <Shield className="h-5 w-5 text-primary" />
-              </div>
-              <DialogTitle>Modifier le rôle de l'utilisateur</DialogTitle>
-            </div>
-            <DialogDescription>
-              Modifiez les privilèges de{" "}
-              <span className="font-semibold text-foreground">
-                {userToModifyRole?.prenom} {userToModifyRole?.nom}
-              </span>{" "}
-              sur l'application.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-2">
-            <label className="text-sm font-semibold">Nouveau rôle</label>
-            <Select value={selectedRole} onValueChange={(val: string | null) => val && setSelectedRole(val)}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Choisir un rôle" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="PUBLIC">PUBLIC (Visiteur simple)</SelectItem>
-                <SelectItem value="ETUDIANT">ETUDIANT</SelectItem>
-                <SelectItem value="DOCUMENTALISTE">DOCUMENTALISTE</SelectItem>
-                <SelectItem value="ADMIN">ADMIN (Administrateur global)</SelectItem>
-              </SelectContent>
-            </Select>
+            <p className="text-muted-foreground text-sm">
+              Consultez les comptes, changez les rôles d'accès ou supprimez un compte.
+            </p>
           </div>
-          <DialogFooter className="gap-2 sm:gap-1">
-            <Button
-              variant="outline"
-              onClick={() => setIsRoleDialogOpen(false)}
-              disabled={isUpdatingRole}
+
+          <form onSubmit={handleSearchSubmit} className="flex gap-2 md:w-96">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Nom, prénom ou email"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Button type="submit">Rechercher</Button>
+          </form>
+        </div>
+
+        {/* Liste */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-24" aria-busy="true">
+            <Spinner className="size-6 text-primary" />
+          </div>
+        ) : users.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 bg-white py-16 text-center text-neutral-900">
+            <SearchX className="h-8 w-8 text-neutral-400" />
+            <p className="text-sm font-medium">Aucun utilisateur trouvé</p>
+            <p className="text-sm text-neutral-500">Essayez avec un autre nom ou une autre adresse email.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <motion.div
+              key={`${page}-${search}`}
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
             >
-              Annuler
-            </Button>
-            <Button onClick={handleConfirmRoleChange} disabled={isUpdatingRole}>
-              {isUpdatingRole ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Mise à jour...
-                </>
-              ) : (
-                "Valider le changement"
+              <AnimatePresence mode="popLayout">
+                {users.map((u) => {
+                  const role = getRole(u.role);
+                  const RoleIcon = role.icon;
+                  const status = u.isActif !== false ? STATUS.actif : STATUS.inactif;
+                  const StatusIcon = status.icon;
+                  const isSelf = u.id === currentUser?.id;
+
+                  return (
+                    <motion.div key={u.id} variants={cardVariants} layout exit="exit">
+                      <Card className="flex h-full flex-col gap-4 p-5">
+                        {/* En-tête : identité + menu d'actions */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-sm font-semibold uppercase text-primary">
+                              {u.prenom?.[0]}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="truncate text-sm font-semibold">
+                                  {u.prenom} {u.nom}
+                                </span>
+                                {isSelf && (
+                                  <Badge variant="outline" className="border-neutral-200 text-neutral-600">
+                                    Vous
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="truncate text-xs font-medium text-neutral-300">{u.email}</p>
+                            </div>
+                          </div>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              type="button"
+                              aria-label={`Actions pour ${u.prenom} ${u.nom}`}
+                              className="-mr-1.5 -mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-md text-neutral-500 outline-none transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-neutral-100"
+                            >
+                              <Ellipsis className="size-4" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem disabled={isSelf} onClick={() => handleOpenRoleChange(u)}>
+                                <Shield className="size-4" />
+                                Modifier le rôle
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={isSelf}
+                                onClick={() => handleOpenDelete(u)}
+                              >
+                                <Trash2 className="size-4" />
+                                Supprimer
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        {/* Pied : rôle + statut (icônes avec tooltip) et date */}
+                        <div className="mt-auto flex items-center justify-between gap-2 border-t pt-3">
+                          <div className="flex items-center gap-1.5">
+                            <IconTip label={role.label} description={role.description} className="text-primary">
+                              <RoleIcon className="size-4" />
+                            </IconTip>
+                            <IconTip label={status.label} description={status.description} className={status.tone}>
+                              <StatusIcon className="size-4" />
+                            </IconTip>
+                          </div>
+                          <span className="text-xs text-neutral-500">
+                            Inscrit le {formatDate(u.createdAt)}
+                          </span>
+                        </div>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </motion.div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t pt-4">
+                <span className="text-sm text-muted-foreground">
+                  {users.length} sur {total} utilisateurs
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label="Page précédente"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    <ChevronLeft className="size-4" />
+                  </Button>
+                  <span className="text-sm font-medium tabular-nums">
+                    {page} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label="Page suivante"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    <ChevronRight className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dialog : suppression */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <div className="mb-2 flex items-center gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-destructive/10">
+                  <AlertTriangle className="size-5 text-destructive" />
+                </div>
+                <DialogTitle>Supprimer le compte</DialogTitle>
+              </div>
+              <DialogDescription>
+                Voulez-vous vraiment supprimer{" "}
+                <span className="font-semibold text-foreground">
+                  {userToDelete?.prenom} {userToDelete?.nom} ({userToDelete?.email})
+                </span>{" "}
+                ? Cette action est définitive.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-1">
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={isDeleting}>
+                Annuler
+              </Button>
+              <Button variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Suppression...
+                  </>
+                ) : (
+                  "Supprimer"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog : changement de rôle */}
+        <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <div className="mb-2 flex items-center gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                  <Shield className="size-5 text-primary" />
+                </div>
+                <DialogTitle>Modifier le rôle</DialogTitle>
+              </div>
+              <DialogDescription>
+                Choisissez les privilèges de{" "}
+                <span className="font-semibold text-foreground">
+                  {userToModifyRole?.prenom} {userToModifyRole?.nom}
+                </span>
+                .
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2 py-2">
+              <label className="text-sm font-medium">Nouveau rôle</label>
+              <Select
+                value={selectedRole}
+                onValueChange={(val: string | null) => val && setSelectedRole(val)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Choisir un rôle" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(ROLES).map(([value, meta]) => (
+                    <SelectItem key={value} value={value}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedRole && (
+                <p className="text-xs text-muted-foreground">{getRole(selectedRole).description}</p>
               )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-1">
+              <Button variant="outline" onClick={() => setIsRoleDialogOpen(false)} disabled={isUpdatingRole}>
+                Annuler
+              </Button>
+              <Button
+                onClick={handleConfirmRoleChange}
+                disabled={isUpdatingRole || selectedRole === userToModifyRole?.role}
+              >
+                {isUpdatingRole ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Mise à jour...
+                  </>
+                ) : (
+                  "Enregistrer"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </TooltipProvider>
   );
 }
