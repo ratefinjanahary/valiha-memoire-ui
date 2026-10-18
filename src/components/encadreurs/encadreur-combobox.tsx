@@ -59,7 +59,7 @@ interface EncadreurComboboxProps {
 }
 
 /**
- * ComboBox d'encadreurs basé sur `components/ui/combobox` (Base UI) :
+ * ComboBox d'encadreurs
  * recherche côté serveur (debounce 300 ms, 10 résultats), sélection multiple en chips
  * (ou unique avec max=1) et création d'un encadreur sans quitter le formulaire.
  */
