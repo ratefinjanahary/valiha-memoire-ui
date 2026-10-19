@@ -173,7 +173,7 @@ export default function SemanticSearchPage() {
               <motion.div key={t.motCleId} variants={v.pop}>
                 <Badge
                   variant="outline"
-                  className="cursor-pointer hover:bg-primary/20 transition-colors"
+                  className="cursor-pointer hover:bg-primary/20 py-3 transition-colors"
                   onClick={() => handleKeywordClick(t.libelle)}
                 >
                   {t.libelle}

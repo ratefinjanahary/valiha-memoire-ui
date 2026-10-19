@@ -22,11 +22,6 @@ export const memoireService = {
     return data;
   },
 
-  getById: async (id: string) => {
-    const { data } = await api.get<Memoire>(`/memoires/${id}`);
-    return data;
-  },
-
   // Soumettre un mémoire (Protégé - FormData pour l'upload PDF)
   submit: async (formData: FormData) => {
     const { data } = await api.post('/memoires/submit', formData, {
@@ -34,6 +29,11 @@ export const memoireService = {
         'Content-Type': 'multipart/form-data',
       },
     });
+    return data;
+  },
+
+  getById: async (id: string) => {
+    const { data } = await api.get<Memoire>(`/memoires/${id}`);
     return data;
   },
 
@@ -48,11 +48,7 @@ export const memoireService = {
     return data;
   },
 
-  // Récupérer les mémoires en attente de modération (pour les modérateurs)
-  getPending: async (page: number = 1) => {
-    const { data } = await api.get<{ data: Memoire[]; meta: any }>('/moderation/pending', { params: { page } });
-    return data;
-  },
+  
 
   // Mettre à jour le statut d'un mémoire (valider ou rejeter)
   updateStatus: async (id: string, statut: 'VALIDE' | 'REJETTE', motifRejet?: string) => {

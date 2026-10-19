@@ -357,9 +357,7 @@ export default function UsersManagementPage() {
                                   {u.prenom} {u.nom}
                                 </span>
                                 {isSelf && (
-                                  <Badge variant="outline" className="border-neutral-200 text-neutral-600">
-                                    Vous
-                                  </Badge>
+                                  <Badge variant="outline">Vous</Badge>
                                 )}
                               </div>
                               <p className="truncate text-xs font-medium text-neutral-300">{u.email}</p>
@@ -391,7 +389,7 @@ export default function UsersManagementPage() {
                         </div>
 
                         {/* Pied : rôle + statut (icônes avec tooltip) et date */}
-                        <div className="mt-auto flex items-center justify-between gap-2 border-t pt-3">
+                        <div className="mt-auto flex items-center justify-between gap-2 pt-3">
                           <div className="flex items-center gap-1.5">
                             <IconTip label={role.label} description={role.description} className="text-primary">
                               <RoleIcon className="size-4" />
