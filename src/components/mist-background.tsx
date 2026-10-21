@@ -4,8 +4,8 @@ import { motion, useReducedMotion } from "framer-motion";
 
 const mistGradient = `radial-gradient(
   closest-side,
-  color-mix(in oklab, var(--primary) 22%, transparent) 0%,
-  color-mix(in oklab, var(--primary) 10%, transparent) 45%,
+  color-mix(in oklab, var(--primary) 14%, transparent) 0%,
+  color-mix(in oklab, var(--primary) 6%, transparent) 45%,
   transparent 100%
 )`;
 
@@ -46,9 +46,9 @@ const MistLayer = ({
               height: b.size,
               background: mistGradient,
             }}
-            animate={reduceMotion ? undefined : { scale: [1, 1.25, 1] }}
+            animate={reduceMotion ? undefined : { scale: [1, 1.08, 1] }}
             transition={{
-              duration: 14 + i * 3,
+              duration: 20 + i * 4,
               ease: "easeInOut",
               repeat: Infinity,
               delay: i * 2,
@@ -58,7 +58,7 @@ const MistLayer = ({
       </motion.div>
     </div>
   );
-}
+};
 
 export const MistBackground = () => {
   return (
@@ -66,8 +66,8 @@ export const MistBackground = () => {
       aria-hidden
       className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
     >
-      <MistLayer duration={140} />
-      <MistLayer duration={200} reverse opacity={0.7} />
+      <MistLayer duration={260} />
+      <MistLayer duration={380} reverse opacity={0.7} />
     </div>
   );
-}
+};

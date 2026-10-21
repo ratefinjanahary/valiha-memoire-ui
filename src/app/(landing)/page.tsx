@@ -94,11 +94,11 @@ export default function HeroPage() {
       <MistBackground />
 
       {/* Navbar */}
-      <header className="w-full border-b border-border/50 backdrop-blur-sm bg-background/60 sticky top-0 z-20">
+      <header className="w-full border-b border-border/50 bg-transparent sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <GraduationCap className="h-6 w-6 text-primary" />
-            <span className="font-bold text-lg tracking-tight">Valiha App</span>
+            <span className="font-bold text-lg tracking-tight">Valiha</span>
           </div>
           <nav className="flex items-center gap-3">
             <ThemeToggle />

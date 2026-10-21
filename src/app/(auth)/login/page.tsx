@@ -211,17 +211,6 @@ export default function LoginPage() {
                     disabled={isSubmitting}
                     className="w-full mt-4 relative overflow-hidden group"
                   >
-                    <motion.span
-                      initial={{ x: "-100%" }}
-                      animate={{ x: "100%" }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 2,
-                        ease: "linear",
-                        repeatDelay: 1,
-                      }}
-                      className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent"
-                    />
                     {isSubmitting ? (
                       <>
                         <Spinner className="w-4 h-4 mr-2" />

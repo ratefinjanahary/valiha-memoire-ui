@@ -198,7 +198,7 @@ export default function RegisterPage() {
         </CardContent>
 
         <CardFooter className="flex justify-center">
-          <motion.p variants={itemVariants} className="text-sm text-muted-foreground">
+          <motion.p variants={itemVariants} className="font-medium text-muted-foreground">
             Déjà un compte ?{" "}
             <Link href="/login" className="text-primary hover:underline">
               Se connecter

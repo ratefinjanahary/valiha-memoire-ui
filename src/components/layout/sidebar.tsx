@@ -99,7 +99,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
       {/* Logo & Brand */}
       <div className={cn("h-16 flex items-center border-b shrink-0", expanded ? "px-6" : "justify-center px-0")}>
         <GraduationCap className={cn("h-6 w-6 text-primary shrink-0", expanded && "mr-3")} />
-        {expanded && <span className="font-bold text-lg tracking-tight whitespace-nowrap">Valiha App</span>}
+        {expanded && <span className="font-bold text-lg tracking-tight whitespace-nowrap">Valiha</span>}
       </div>
 
       {/* Navigation */}

@@ -12,8 +12,19 @@ interface MemoireCardProps {
 }
 
 export function MemoireCard({ memoire, onClick }: MemoireCardProps) {
+
+  const capitalize = (str?: string) => {
+    if (!str) return "";
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  }
   const relevancePercent =
     memoire.jaccardScore != null ? Math.round(memoire.jaccardScore * 100) : null;
+
+    const truncateWords = (text: string, maxWords: number) => {
+      const words = text.trim().split(/\s+/);
+      if (words.length <= maxWords) return text;
+      return words.slice(0, maxWords).join(" ") + "…";
+    };
 
   return (
     <Card
@@ -22,15 +33,15 @@ export function MemoireCard({ memoire, onClick }: MemoireCardProps) {
     >
       <CardHeader className="pb-1 border-b">
         <div className="flex justify-between items-start gap-2 mb-2">
-          <Badge variant="secondary" className="font-semibold lowercase bg-primary/10 text-primary hover:bg-primary/20">
-            {memoire.typeDiplome}
+          <Badge variant="secondary" className="font-semibold bg-primary/10 text-primary hover:bg-primary/20">
+            {capitalize(memoire.typeDiplome)}
           </Badge>
           <div className="flex items-center text-xs text-muted-foreground">
             <Calendar className="w-3 h-3 mr-1" />
             {memoire.anneeSoutenance}
           </div>
         </div>
-        <h3 className="font-semibold line-clamp-2 group-hover:text-primary transition-colors">
+        <h3 className="font-semibold line-clamp-1 group-hover:text-primary transition-colors">
           {memoire.titre}
         </h3>
         <div className="text-sm text-muted-foreground flex items-center mt-1">
@@ -40,28 +51,30 @@ export function MemoireCard({ memoire, onClick }: MemoireCardProps) {
       </CardHeader>
 
       <CardContent className="flex-1">
-        <p className="text-sm text-muted-foreground line-clamp-3">
-          {memoire.resume || "Aucun résumé disponible."}
+        <p className="text-sm text-muted-foreground">
+          {memoire.resume
+          ? truncateWords(memoire.resume, 12)
+          : "Aucun résumé disponible."}
         </p>
       </CardContent>
 
       <CardFooter className="pt-0 pb-4 flex flex-col items-start gap-3">
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           {memoire.universite && (
-            <div className="flex items-center bg-muted px-2 py-1 rounded-md">
+            <Badge variant="outline" className="py-3">
               <Building2 className="w-3 h-3 mr-1" />
               <span className="truncate max-w-30" title={memoire.universite.nom}>
                 {memoire.universite.sigle || memoire.universite.nom}
               </span>
-            </div>
+            </Badge>
           )}
           {memoire.domaine && (
-            <div className="flex items-center bg-muted px-2 py-1 rounded-md">
+            <Badge variant="outline" className="py-3">
               <BookOpen className="w-3 h-3 mr-1" />
               <span className="truncate max-w-30" title={memoire.domaine.nom}>
                 {memoire.domaine.nom}
               </span>
-            </div>
+            </Badge>
           )}
         </div>
 

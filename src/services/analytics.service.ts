@@ -36,6 +36,15 @@ export const analyticsService = {
     return data;
   },
 
+  getConsultationsStats: async (params?: { annee?: number; mois?: number }) => {
+    const { data } = await api.get<{
+      annee: number | null;
+      mois: number | null;
+      totalConsultations: number;
+    }>('/analytics/consultations', { params });
+    return data;
+  },
+
   getChartsData: async () => {
     const { data } = await api.get('/analytics/charts');
     return data;

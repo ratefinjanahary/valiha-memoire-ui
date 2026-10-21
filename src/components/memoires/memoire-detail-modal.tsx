@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
-  Loader2, Calendar, GraduationCap, Building2, 
-  BookOpen, Download, UserCheck, ChevronRight, Eye, 
-  Network
+  Calendar, GraduationCap, Building2, BookOpen, Download, 
+  UserCheck, ChevronRight, Eye, Network, Quote
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -13,14 +12,12 @@ import { memoireService } from "@/services/memoire.service";
 import { Memoire } from "@/types/memoire";
 
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  Dialog,DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Spinner } from "../ui/spinner";
 
 interface MemoireDetailModalProps {
   memoireId: string | null;
@@ -35,6 +32,7 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose, onSelectSimilar
   const [similaires, setSimilaires] = useState<Memoire[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingSimilaires, setIsLoadingSimilaires] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (isOpen && memoireId) {
@@ -71,6 +69,25 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose, onSelectSimilar
     }
   }, [isOpen, memoireId, onClose]);
 
+  const handleExportBibtex = async () => {
+    if (!memoire) return;
+    setIsExporting(true);
+    try {
+      const bib = await memoireService.exportBibtex(memoire.id);
+      const url = URL.createObjectURL(new Blob([bib], { type: "application/x-bibtex;charset=utf-8" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `memoire-${memoire.id}.bib`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Erreur export BibTeX:", err);
+      toast.error("Impossible d'exporter la citation BibTeX");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleSelectSimilar = (id: string) => {
     if (onSelectSimilar) {
       onSelectSimilar(id);
@@ -82,7 +99,7 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose, onSelectSimilar
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Spinner className="h-7 w-7 text-primary" />
             <p className="text-sm text-muted-foreground">Chargement des détails du mémoire...</p>
           </div>
         ) : memoire ? (
@@ -198,7 +215,7 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose, onSelectSimilar
                   <h3 className="text-sm font-semibold text-foreground">Mémoires similaires</h3>
                   {isLoadingSimilaires ? (
                     <div className="flex items-center space-x-2 py-2">
-                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      <Spinner className="h-4 w-4 text-primary" />
                       <span className="text-xs text-muted-foreground">Recherche de mémoires connexes...</span>
                     </div>
                   ) : similaires.length === 0 ? (
@@ -229,6 +246,10 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose, onSelectSimilar
             </ScrollArea>
 
             <div className="px-6 py-4 border-t bg-muted/20 flex flex-col sm:flex-row gap-2 justify-end">
+              <Button variant="outline" onClick={handleExportBibtex} disabled={isExporting} className="w-full sm:w-auto">
+                {isExporting ? <Spinner className="mr-2 h-4 w-4 animate-spin" /> : <Quote className="mr-2 h-4 w-4" />}
+                Exporter BibTeX
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => {

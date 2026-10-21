@@ -15,16 +15,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SemanticLoader } from "@/components/memoires/semantic-loader";
 import * as v from "@/lib/motion-variants";
+import { Spinner } from "@/components/ui/spinner";
 
 const pageStagger = v.stagger(0.1);
 const heroStagger = v.stagger(0.1, 0.05);
-const trendingStagger = v.stagger(0.04, 0.1);
 const gridStagger = v.stagger(0.08);
+
+const MAX_TRENDING_KEYWORDS = 8;
 
 export default function SemanticSearchPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Memoire[]>([]);
-  const [trending, setTrending] = useState<TrendingKeyword[]>([]);
 
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -32,13 +33,18 @@ export default function SemanticSearchPage() {
   const [selectedMemoireId, setSelectedMemoireId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
+  const [trending, setTrending] = useState<TrendingKeyword[]>([]);
+  const [isTrendingLoading, setIsTrendingLoading] = useState(true);
+
   useEffect(() => {
     const loadTrending = async () => {
       try {
-        const data = await searchService.getTrendingKeywords(15);
-        setTrending(data);
+        const data = await searchService.getTrendingKeywords(MAX_TRENDING_KEYWORDS);
+        setTrending(data.slice(0, MAX_TRENDING_KEYWORDS));
       } catch (error) {
         console.error("Erreur lors du chargement des tendances", error);
+      } finally {
+        setIsTrendingLoading(false);
       }
     };
     loadTrending();
@@ -112,7 +118,7 @@ export default function SemanticSearchPage() {
             pour trouver les memoires les plus pertinents.
           </motion.p>
 
-          <motion.form variants={v.fadeUp} onSubmit={handleSemanticSearch} className="max-w-2xl mx-auto mt-8 flex gap-2">
+          <motion.form variants={v.fadeUp} onSubmit={handleSemanticSearch} className="max-w-2xl mx-auto mt-8 flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-2.5 h-5 w-5 text-muted-foreground" />
               <Input
@@ -123,25 +129,24 @@ export default function SemanticSearchPage() {
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
-            <Button type="submit" size="lg" className="px-8 h-10 relative overflow-hidden group" disabled={isSearching || !query.trim()}>
-              <motion.span
-                initial={{ x: "-100%" }}
-                animate={{ x: "100%" }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 2,
-                  ease: "linear",
-                  repeatDelay: 1,
-                }}
-                className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent"
-              />
+            <Button
+              type="submit"
+              size="lg"
+              className="px-3 sm:px-8 h-10 relative overflow-hidden group"
+              disabled={isSearching || !query.trim()}
+              aria-label="Rechercher"
+            >
+              {/* shimmer inchangé */}
               {isSearching ? (
                 <span className="relative flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 animate-pulse" />
-                  Analyse...
+                  <Spinner className="h-4 w-4" />
+                  <span className="hidden sm:inline">Analyse...</span>
                 </span>
               ) : (
-                "Rechercher"
+                <>
+                  <Search className="h-4 w-4 sm:hidden relative" />
+                  <span className="hidden sm:inline">Rechercher</span>
+                </>
               )}
             </Button>
           </motion.form>
@@ -158,19 +163,19 @@ export default function SemanticSearchPage() {
             id="trending-title"
             className="font-semibold text-muted-foreground"
           >
-            Tendances actuelles
+            Mots-clés populaires
           </h2>
         </motion.div>
 
         {trending.length > 0 ? (
-          <motion.div
-            variants={trendingStagger}
-            initial="hidden"
-            animate="visible"
-            className="flex flex-wrap gap-2"
-          >
+          <div className="flex flex-wrap gap-2">
             {trending.map((t, i) => (
-              <motion.div key={t.motCleId} variants={v.pop}>
+              <motion.div
+                key={t.motCleId}
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1 + i * 0.04, type: "spring", stiffness: 300, damping: 22 }}
+              >
                 <Badge
                   variant="outline"
                   className="cursor-pointer hover:bg-primary/20 py-3 transition-colors"
@@ -181,9 +186,11 @@ export default function SemanticSearchPage() {
                 </Badge>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Chargement des tendances...</p>
+          <p className="text-sm text-muted-foreground">
+            {isTrendingLoading ? "Chargement des tendances..." : "Aucune tendance pour le moment."}
+          </p>
         )}
       </motion.section>
 

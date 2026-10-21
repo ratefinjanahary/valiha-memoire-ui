@@ -31,6 +31,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 
 interface Kpis {
@@ -54,6 +61,16 @@ interface ChartsData {
   repartitionUniversite: ChartItem[];
   evolutionAnnee: AnneeItem[];
 }
+
+const MOIS = [
+  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
+];
+const currentYear = new Date().getFullYear();
+const ANNEES = Array.from({ length: 6 }, (_, i) => currentYear - i);
+
+const selectClass =
+  "h-7 rounded-md border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
 
 const pieColors = [
   "var(--color-primary)",
@@ -131,6 +148,10 @@ export default function DashboardPage() {
   const [topMemoires, setTopMemoires] = useState<TopMemoire[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  const [filtreMois, setFiltreMois] = useState<number | undefined>();
+  const [filtreAnnee, setFiltreAnnee] = useState<number | undefined>();
+  const [consultationsFiltrees, setConsultationsFiltrees] = useState<number | null>(null);
+
   useEffect(() => {
     async function loadDashboardData() {
       try {
@@ -152,6 +173,23 @@ export default function DashboardPage() {
 
     loadDashboardData();
   }, []);
+
+  useEffect(() => {
+    if (!filtreMois && !filtreAnnee) {
+      setConsultationsFiltrees(null);
+      return;
+    }
+    let cancelled = false;
+    analyticsService
+      .getConsultationsStats({ annee: filtreAnnee, mois: filtreMois })
+      .then((res) => {
+        if (!cancelled) setConsultationsFiltrees(res.totalConsultations);
+      })
+      .catch((e) => console.error("Erreur stats consultations", e));
+    return () => {
+      cancelled = true;
+    };
+  }, [filtreMois, filtreAnnee]);
 
   if (isLoading) {
     return (
@@ -181,19 +219,64 @@ export default function DashboardPage() {
       {/* KPIs Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {kpiConfig.map(({ key, title, description, icon: Icon, format }) => {
-          const value = kpis?.[key];
+          const isConsultations = key === "totalConsultations";
+          const value =
+            isConsultations && consultationsFiltrees !== null
+              ? consultationsFiltrees
+              : kpis?.[key];
 
           return (
             <Card key={key}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{title}</CardTitle>
+                {isConsultations && (
+                  <div className="flex gap-1">
+                    <Select
+                      value={filtreMois ? String(filtreMois) : "all"}
+                      onValueChange={(v) => setFiltreMois(v === "all" ? undefined : Number(v))}
+                    >
+                      <SelectTrigger size="sm" className="h-6 w-auto gap-1 px-2 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Mois</SelectItem>
+                        {MOIS.map((m, i) => (
+                          <SelectItem key={m} value={String(i + 1)}>
+                            {m}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={filtreAnnee ? String(filtreAnnee) : "all"}
+                      onValueChange={(v) => setFiltreAnnee(v === "all" ? undefined : Number(v))}
+                    >
+                      <SelectTrigger size="sm" className="h-6 w-auto gap-1 px-2 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Année</SelectItem>
+                        {ANNEES.map((a) => (
+                          <SelectItem key={a} value={String(a)}>
+                            {a}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <Icon className="h-6 w-6 text-primary" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
                   {value == null ? "—" : format ? format(value) : value}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{description}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {isConsultations && consultationsFiltrees !== null
+                    ? `Vues en ${filtreMois ? MOIS[filtreMois - 1] + " " : ""}${filtreAnnee ?? currentYear}`
+                    : description}
+                </p>
               </CardContent>
             </Card>
           );
@@ -219,13 +302,6 @@ export default function DashboardPage() {
               <div className="h-64 w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={evolutionData} margin={{ top: 10, right: 16, left: -16, bottom: 0 }}>
-                    <CartesianGrid
-                      strokeDasharray="4 6"
-                      vertical={false}
-                      stroke="currentColor"
-                      className="text-muted-foreground"
-                      opacity={0.15}
-                    />
                     <XAxis
                       dataKey="name"
                       stroke="#888888"

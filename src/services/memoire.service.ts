@@ -37,6 +37,12 @@ export const memoireService = {
     return data;
   },
 
+  // Export BibTeX (texte brut)
+  exportBibtex: async (id: string) => {
+    const { data } = await api.get<string>(`/memoires/${id}/export-bibtex`, { responseType: 'text' });
+    return data;
+  },
+
   // Mémoires similaires (Jaccard)
   getSimilaires: async (id: string, limit: number = 5) => {
     const { data } = await api.get<Memoire[]>(`/memoires/${id}/similaires`, { params: { limit } });
