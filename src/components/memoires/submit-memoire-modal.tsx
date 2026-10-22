@@ -70,8 +70,9 @@ const formSchema = z.object({
       (files) => ACCEPTED_FILE_TYPES.includes(files?.[0]?.type),
       "Seuls les fichiers PDF sont acceptés."
     ),
-  // dans formSchema
-  motsCles: z.array(z.string().trim().min(2).max(50)).max(MAX_MOTS_CLES, `${MAX_MOTS_CLES} mots-clés maximum`),
+  motsCles: z
+  .array(z.string().trim().min(2).max(50).regex(/\p{L}/u, "Un mot-clé doit contenir au moins une lettre"))
+  .max(MAX_MOTS_CLES, `${MAX_MOTS_CLES} mots-clés maximum`),
 });
 
 interface SubmitMemoireModalProps {

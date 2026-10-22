@@ -236,7 +236,7 @@ export default function ModerationPage() {
 
               return (
                 <Card key={memoire.id} className="overflow-hidden flex flex-col h-full">
-                  <div className="flex-1 p-6 flex flex-col">
+                  <div className="flex-1 p-3 flex flex-col">
                     <div>
                       {/* Statut, tags et année */}
                       <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -259,7 +259,7 @@ export default function ModerationPage() {
                       </div>
 
                       {/* Titre */}
-                      <h3 className="font-bold text-md text-foreground mb-2">{memoire.titre}</h3>
+                      <h3 className="font-bold text-md text-foreground line-clamp-1 mb-2">{memoire.titre}</h3>
 
                       {/* Auteur */}
                       <div className="text-sm text-muted-foreground flex items-center mb-4">

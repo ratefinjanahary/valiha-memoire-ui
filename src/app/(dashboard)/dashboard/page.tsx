@@ -158,7 +158,7 @@ export default function DashboardPage() {
         const [kpiData, chartData, topData] = await Promise.all([
           analyticsService.getKpis(),
           analyticsService.getChartsData(),
-          memoireService.getTop(50),
+          memoireService.getTop(5),
         ]);
         setKpis(kpiData);
         setCharts(chartData);

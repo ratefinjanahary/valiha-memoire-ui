@@ -14,6 +14,8 @@ export interface Domaine {
 export interface MotCle {
   id: string;
   libelle: string;
+  unescoUri?: string | null;
+  isUnesco?: boolean;
 }
 
 export interface Encadreur {

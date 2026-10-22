@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
-  Calendar, GraduationCap, Building2, BookOpen, Download, 
-  UserCheck, ChevronRight, Eye, Network, Quote
+  Calendar, GraduationCap, Building2, BookOpen, 
+  UserCheck, ChevronRight, Eye, Network, SquareArrowOutUpRight
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -201,12 +201,32 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose, onSelectSimilar
                   <div className="space-y-2">
                     <h3 className="text-sm font-semibold text-foreground">Mots-clés</h3>
                     <div className="flex flex-wrap gap-1.5">
-                      {memoire.motsCles.map((mc, idx) => (
-                        <Badge key={idx} variant="outline" className="text-xs font-normal border-muted-foreground/30 px-2.5 py-1">
-                          {mc.motCle.libelle}
-                        </Badge>
-                      ))}
+                      {memoire.motsCles.map(({ motCle }) =>
+                        motCle.isUnesco && motCle.unescoUri ? (
+                          <a
+                            key={motCle.id}
+                            href={motCle.unescoUri}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Descripteur du Thésaurus de l'UNESCO"
+                          >
+                            <Badge variant="violet-outline" className="text-xs font-normal gap-1 px-2.5 py-1 hover:bg-secondary/70">
+                              {motCle.libelle}
+                              <SquareArrowOutUpRight className="w-3 h-3" />
+                            </Badge>
+                          </a>
+                        ) : (
+                          <Badge key={motCle.id} variant="outline" className="text-xs font-normal border-muted-foreground/30 px-2.5 py-1">
+                            {motCle.libelle}
+                          </Badge>
+                        ),
+                      )}
                     </div>
+                    {memoire.motsCles.some(({ motCle }) => motCle.isUnesco) && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Les mots-clés avec icône sont des descripteurs du Thésaurus de l'UNESCO.
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -245,34 +265,36 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose, onSelectSimilar
               </div>
             </ScrollArea>
 
-            <div className="px-6 py-4 border-t bg-muted/20 flex flex-col sm:flex-row gap-2 justify-end">
-              <Button variant="outline" onClick={handleExportBibtex} disabled={isExporting} className="w-full sm:w-auto">
-                {isExporting ? <Spinner className="mr-2 h-4 w-4 animate-spin" /> : <Quote className="mr-2 h-4 w-4" />}
-                Exporter BibTeX
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  router.push(`/graph?focus=mem_${memoire.id}`);
-                  onClose();
-                }}
-                className="w-full sm:w-auto"
-              >
-                <Network className="mr-2 h-4 w-4" />
-                Voir dans le graphe
-              </Button>
-              <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
-                Fermer
-              </Button>
-              {memoire.pdfUrl && (
-                <Button 
-                  onClick={() => window.open(memoire.pdfUrl, "_blank", "noopener,noreferrer")} 
+            <div className="px-6 py-4 border-t bg-muted/20 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="sm:flex-1">
+                {memoire.pdfUrl && (
+                  <a
+                    href={memoire.pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-xs font-semibold text-primary hover:underline"
+                  >
+                    <SquareArrowOutUpRight className="mr-2 h-4 w-4 shrink-0" />
+                    Consulter le PDF
+                  </a>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    router.push(`/graph?focus=mem_${memoire.id}`);
+                    onClose();
+                  }}
                   className="w-full sm:w-auto"
                 >
-                  <Download className="mr-2 h-4 w-4" />
-                  Consulter le PDF
+                  <Network className="mr-2 h-4 w-4" />
+                  Voir dans le graphe
                 </Button>
-              )}
+                <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
+                  Fermer
+                </Button>
+              </div>
             </div>
           </>
         ) : (

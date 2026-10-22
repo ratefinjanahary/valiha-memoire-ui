@@ -49,7 +49,7 @@ export const memoireService = {
     return data;
   },
 
-  getTop: async (limit: number = 50) => {
+  getTop: async (limit: number = 5) => {
     const { data } = await api.get<TopMemoire[]>(`/memoires/top`, { params: { limit } });
     return data;
   },
