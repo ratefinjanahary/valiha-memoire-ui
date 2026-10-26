@@ -23,16 +23,12 @@ interface MemoireDetailModalProps {
   memoireId: string | null;
   isOpen: boolean;
   onClose: () => void;
-  onSelectSimilar?: (id: string) => void;
 }
 
-export function MemoireDetailModal({ memoireId, isOpen, onClose, onSelectSimilar }: MemoireDetailModalProps) {
+export function MemoireDetailModal({ memoireId, isOpen, onClose }: MemoireDetailModalProps) {
   const router = useRouter();
   const [memoire, setMemoire] = useState<Memoire | null>(null);
-  const [similaires, setSimilaires] = useState<Memoire[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingSimilaires, setIsLoadingSimilaires] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (isOpen && memoireId) {
@@ -41,18 +37,6 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose, onSelectSimilar
         try {
           const data = await memoireService.getById(memoireId);
           setMemoire(data);
-          
-          // Charger les mémoires similaires
-          setIsLoadingSimilaires(true);
-          try {
-            const sim = await memoireService.getSimilaires(memoireId, 3);
-            setSimilaires(sim);
-          } catch (e) {
-            console.error("Erreur chargement similaires:", e);
-          } finally {
-            setIsLoadingSimilaires(false);
-          }
-
         } catch (err) {
           console.error("Erreur de récupération du mémoire:", err);
           toast.error("Impossible de charger les détails du mémoire");
@@ -65,34 +49,8 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose, onSelectSimilar
       loadData();
     } else {
       setMemoire(null);
-      setSimilaires([]);
     }
   }, [isOpen, memoireId, onClose]);
-
-  const handleExportBibtex = async () => {
-    if (!memoire) return;
-    setIsExporting(true);
-    try {
-      const bib = await memoireService.exportBibtex(memoire.id);
-      const url = URL.createObjectURL(new Blob([bib], { type: "application/x-bibtex;charset=utf-8" }));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `memoire-${memoire.id}.bib`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Erreur export BibTeX:", err);
-      toast.error("Impossible d'exporter la citation BibTeX");
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleSelectSimilar = (id: string) => {
-    if (onSelectSimilar) {
-      onSelectSimilar(id);
-    }
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -229,39 +187,6 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose, onSelectSimilar
                     )}
                   </div>
                 )}
-
-                {/* Recommandations de Mémoires Similaires */}
-                <div className="space-y-3 pt-4 border-t">
-                  <h3 className="text-sm font-semibold text-foreground">Mémoires similaires</h3>
-                  {isLoadingSimilaires ? (
-                    <div className="flex items-center space-x-2 py-2">
-                      <Spinner className="h-4 w-4 text-primary" />
-                      <span className="text-xs text-muted-foreground">Recherche de mémoires connexes...</span>
-                    </div>
-                  ) : similaires.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">Aucun mémoire similaire trouvé.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {similaires.map((sim) => (
-                        <button
-                          key={sim.id}
-                          onClick={() => handleSelectSimilar(sim.id)}
-                          className="w-full text-left p-3 border rounded-md hover:bg-muted/50 transition-colors flex items-center justify-between group"
-                        >
-                          <div className="space-y-1 pr-4">
-                            <p className="font-medium text-xs text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                              {sim.titre}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground">
-                              {sim.auteurPrenom} {sim.auteurNom} • {sim.anneeSoutenance} • <span className="lowercase font-semibold text-primary">{sim.typeDiplome}</span>
-                            </p>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary shrink-0" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
             </ScrollArea>
 

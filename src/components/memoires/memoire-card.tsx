@@ -77,21 +77,7 @@ export function MemoireCard({ memoire, onClick }: MemoireCardProps) {
             </Badge>
           )}
         </div>
-
-        {memoire.motsCles && memoire.motsCles.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
-            {memoire.motsCles.slice(0, 3).map((mc, idx) => (
-              <Badge key={idx} variant="outline" className="text-[10px] font-normal border-muted-foreground/20">
-                {mc.motCle?.libelle}
-              </Badge>
-            ))}
-            {memoire.motsCles.length > 3 && (
-              <Badge variant="outline" className="text-[10px] font-normal border-muted-foreground/20">
-                +{memoire.motsCles.length - 3}
-              </Badge>
-            )}
-          </div>
-        )}
+        
 
         {/* Uniquement en recherche sémantique (jaccardScore présent) */}
         {relevancePercent !== null && (

@@ -161,11 +161,11 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
               <Pencil className="h-4 w-4 mr-2" />
               Modifier mon profil
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive hover:text-destructive hover:bg-none" onClick={onDeleteProfile}>
+            <DropdownMenuItem className="hover:bg-destructive/10 hover:text-destructive" onClick={onDeleteProfile}>
               <Trash2 className="h-4 w-4 mr-2" />
               Supprimer mon compte
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive hover:text-destructive hover:bg-none" onClick={onLogout}>
+            <DropdownMenuItem className="hover:bg-destructive/10 hover:text-destructive" onClick={onLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Déconnexion
             </DropdownMenuItem>

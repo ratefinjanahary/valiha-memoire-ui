@@ -15,8 +15,6 @@ import { MemoireDetailModal } from "@/components/memoires/memoire-detail-modal";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -107,7 +105,7 @@ export default function MemoiresPage() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button type="submit" size="lg" disabled={isLoading} className="px-5">
+          <Button type="submit" size="lg" variant="outline" disabled={isLoading} className="px-5">
             Rechercher
           </Button>
         </form>
@@ -180,9 +178,6 @@ export default function MemoiresPage() {
         onClose={() => {
           setIsDetailOpen(false);
           setSelectedMemoireId(null);
-        }}
-        onSelectSimilar={(id) => {
-          setSelectedMemoireId(id);
         }}
       />
     </div>

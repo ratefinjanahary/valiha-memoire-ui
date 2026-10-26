@@ -37,26 +37,11 @@ export const memoireService = {
     return data;
   },
 
-  // Export BibTeX (texte brut)
-  exportBibtex: async (id: string) => {
-    const { data } = await api.get<string>(`/memoires/${id}/export-bibtex`, { responseType: 'text' });
-    return data;
-  },
-
-  // Mémoires similaires (Jaccard)
-  getSimilaires: async (id: string, limit: number = 5) => {
-    const { data } = await api.get<Memoire[]>(`/memoires/${id}/similaires`, { params: { limit } });
-    return data;
-  },
-
   getTop: async (limit: number = 5) => {
     const { data } = await api.get<TopMemoire[]>(`/memoires/top`, { params: { limit } });
     return data;
   },
 
-  
-
-  // Mettre à jour le statut d'un mémoire (valider ou rejeter)
   updateStatus: async (id: string, statut: 'VALIDE' | 'REJETTE', motifRejet?: string) => {
     const { data } = await api.patch(`/moderation/${id}/status`, { statut, motifRejet });
     return data;
@@ -68,7 +53,6 @@ export const memoireService = {
     return data;
   },
 
-  // Modifier un mémoire non validé (BROUILLON, EN_ATTENTE_MODERATION, REJETTE)
   update: async (id: string, payload: UpdateMemoirePayload) => {
     const { data } = await api.patch<Memoire>(`/moderation/memoires/${id}`, payload);
     return data;

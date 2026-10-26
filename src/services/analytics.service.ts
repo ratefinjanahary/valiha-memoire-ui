@@ -30,6 +30,42 @@ export interface AuditMeta {
   totalPages: number;
 }
 
+export interface ChartItem {
+  id: string;
+  label: string;
+  value: number;
+}
+
+export interface AnneeItem {
+  annee: number;
+  count: number;
+}
+
+export interface UniversiteOption {
+  id: string;
+  label: string;
+  total: number;
+}
+
+export interface ChartsOptions {
+  universites: UniversiteOption[];
+  anneeMin: number | null;
+  anneeMax: number | null;
+}
+
+export interface EvolutionResponse {
+  anneeDebut: number;
+  anneeFin: number;
+  data: AnneeItem[];
+}
+
+export interface ChartsData {
+  repartitionUniversite: ChartItem[];
+  evolutionAnnee: AnneeItem[];
+  periode: { anneeDebut: number; anneeFin: number };
+  options: ChartsOptions;
+}
+
 export const analyticsService = {
   getKpis: async () => {
     const { data } = await api.get('/analytics/kpis');
@@ -46,7 +82,21 @@ export const analyticsService = {
   },
 
   getChartsData: async () => {
-    const { data } = await api.get('/analytics/charts');
+    const { data } = await api.get<ChartsData>('/analytics/charts');
+    return data;
+  },
+
+  getEvolution: async (anneeDebut: number) => {
+    const { data } = await api.get<EvolutionResponse>('/analytics/charts/evolution', {
+      params: { anneeDebut },
+    });
+    return data;
+  },
+
+  getRepartition: async (universiteIds: string[]) => {
+    const { data } = await api.get<ChartItem[]>('/analytics/charts/repartition', {
+      params: { universiteIds: universiteIds.join(',') },
+    });
     return data;
   },
 

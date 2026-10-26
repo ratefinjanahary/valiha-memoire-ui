@@ -6,24 +6,35 @@ import {
   Line,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
   Sector,
   Legend,
-  type PieSectorDataItem
 } from "recharts";
 import type { PieSectorShapeProps } from "recharts";
-import { XCircle, LucideIcon, BookCheck, BookAlert, BookSearch } from "lucide-react";
+import {
+  XCircle,
+  ChevronDown,
+  LucideIcon,
+  BookCheck,
+  BookAlert,
+  BookSearch,
+} from "lucide-react";
 
-import { analyticsService } from "@/services/analytics.service";
+import {
+  analyticsService,
+  type AnneeItem,
+  type ChartItem,
+  type ChartsOptions,
+} from "@/services/analytics.service";
 import { memoireService } from "@/services/memoire.service";
 import { TopMemoire } from "@/types/memoire";
 import { TopMemoiresBarChart } from "@/components/dashboard/top-memoires-bar-chart";
 import { AuditLogsTable } from "@/components/dashboard/audit-logs-table";
 
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -31,6 +42,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -47,20 +67,8 @@ interface Kpis {
   totalConsultations: number;
 }
 
-interface ChartItem {
-  label: string;
-  value: number;
-}
-
-interface AnneeItem {
-  annee: number | string;
-  count: number;
-}
-
-interface ChartsData {
-  repartitionUniversite: ChartItem[];
-  evolutionAnnee: AnneeItem[];
-}
+const NB_ANNEES = 5;
+const MAX_UNIVERSITES = 5;
 
 const MOIS = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -69,22 +77,25 @@ const MOIS = [
 const currentYear = new Date().getFullYear();
 const ANNEES = Array.from({ length: 6 }, (_, i) => currentYear - i);
 
-const selectClass =
-  "h-7 rounded-md border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
-
-const pieColors = [
-  "var(--color-primary)",
-  "#6366f1",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#14b8a6",
+// Nuances dérivées de --primary: oklch(0.5106 0.2301 276.9656)
+// Même teinte (276.9656) : seules la luminosité et la chroma varient.
+// Index 0 = la plus grande part du camembert.
+const PIE_COLORS = [
+  "oklch(0.3600 0.1700 276.9656)",
+  "oklch(0.5106 0.2301 276.9656)", // --primary
+  "oklch(0.6400 0.1900 276.9656)",
+  "oklch(0.7600 0.1300 276.9656)",
+  "oklch(0.8700 0.0700 276.9656)",
 ];
 
 const MyCustomPie = (props: PieSectorShapeProps) => (
-  <Sector {...props} fill={pieColors[props.index % pieColors.length]} />
-)
+  <Sector
+    {...props}
+    fill={PIE_COLORS[props.index % PIE_COLORS.length]}
+    stroke="var(--color-background, #fff)"
+    strokeWidth={2}
+  />
+);
 
 const kpiConfig: {
   key: keyof Kpis;
@@ -144,9 +155,20 @@ const EvolutionTooltip = ({
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [kpis, setKpis] = useState<Kpis | null>(null);
-  const [charts, setCharts] = useState<ChartsData | null>(null);
   const [topMemoires, setTopMemoires] = useState<TopMemoire[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  // Graphique d'évolution (fenêtre de 5 ans)
+  const [evolution, setEvolution] = useState<AnneeItem[]>([]);
+  const [anneeDebut, setAnneeDebut] = useState<number | null>(null);
+  const [evolutionLoading, setEvolutionLoading] = useState(false);
+
+  // Camembert (5 universités max)
+  const [repartition, setRepartition] = useState<ChartItem[]>([]);
+  const [universitesChoisies, setUniversitesChoisies] = useState<string[]>([]);
+  const [repartitionLoading, setRepartitionLoading] = useState(false);
+
+  const [chartOptions, setChartOptions] = useState<ChartsOptions | null>(null);
 
   const [filtreMois, setFiltreMois] = useState<number | undefined>();
   const [filtreAnnee, setFiltreAnnee] = useState<number | undefined>();
@@ -161,7 +183,11 @@ export default function DashboardPage() {
           memoireService.getTop(5),
         ]);
         setKpis(kpiData);
-        setCharts(chartData);
+        setEvolution(chartData.evolutionAnnee);
+        setAnneeDebut(chartData.periode.anneeDebut);
+        setRepartition(chartData.repartitionUniversite);
+        setUniversitesChoisies(chartData.repartitionUniversite.map((i) => i.id));
+        setChartOptions(chartData.options);
         setTopMemoires(topData);
       } catch (error) {
         console.error("Erreur chargement analytics", error);
@@ -191,6 +217,39 @@ export default function DashboardPage() {
     };
   }, [filtreMois, filtreAnnee]);
 
+  const handlePeriodeChange = async (value: string | null) => {
+    if (value === null) return;
+    const debut = Number(value);
+    setAnneeDebut(debut);
+    setEvolutionLoading(true);
+    try {
+      const res = await analyticsService.getEvolution(debut);
+      setEvolution(res.data);
+    } catch (e) {
+      console.error("Erreur évolution par année", e);
+    } finally {
+      setEvolutionLoading(false);
+    }
+  };
+
+  const handleToggleUniversite = async (id: string, checked: boolean) => {
+    const next = checked
+      ? [...universitesChoisies, id]
+      : universitesChoisies.filter((u) => u !== id);
+
+    if (next.length === 0 || next.length > MAX_UNIVERSITES) return;
+
+    setUniversitesChoisies(next);
+    setRepartitionLoading(true);
+    try {
+      setRepartition(await analyticsService.getRepartition(next));
+    } catch (e) {
+      console.error("Erreur répartition par université", e);
+    } finally {
+      setRepartitionLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
@@ -199,13 +258,21 @@ export default function DashboardPage() {
     );
   }
 
-  const evolutionData =
-    charts?.evolutionAnnee.map((item) => ({
-      name: String(item.annee),
-      count: item.count,
-    })) ?? [];
+  const evolutionData = evolution.map((item) => ({
+    name: String(item.annee),
+    count: item.count,
+  }));
+  const hasEvolutionData = chartOptions?.anneeMax != null;
 
-  const repartitionData = charts?.repartitionUniversite ?? [];
+  // Fenêtres de 5 ans, de la plus récente à la plus ancienne
+  const periodes: { debut: number; label: string }[] = [];
+  if (chartOptions?.anneeMax != null) {
+    const fin = chartOptions.anneeMax;
+    const min = chartOptions.anneeMin ?? fin;
+    for (let debut = fin - (NB_ANNEES - 1); debut + (NB_ANNEES - 1) >= min; debut -= NB_ANNEES) {
+      periodes.push({ debut, label: `${debut} – ${debut + NB_ANNEES - 1}` });
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -285,21 +352,43 @@ export default function DashboardPage() {
 
       {/* Charts Section */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Bar Chart — Évolution par année */}
+        {/* Évolution par année (fenêtre de 5 ans) */}
         <Card className="col-span-4 border-muted">
-          <CardHeader>
-            <CardTitle>Évolution des Dépôts par Année</CardTitle>
-            <CardDescription>
-              Nombre de mémoires validés par année de soutenance.
-            </CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+            <div className="space-y-1.5">
+              <CardTitle>Évolution des Dépôts par Année</CardTitle>
+              <CardDescription>
+                Nombre de mémoires validés par année de soutenance.
+              </CardDescription>
+            </div>
+            {hasEvolutionData && anneeDebut !== null && (
+              <Select value={String(anneeDebut)} onValueChange={handlePeriodeChange}>
+                <SelectTrigger size="sm" className="h-7 w-auto gap-1 px-2 text-xs">
+                  <SelectValue>
+                    {`${anneeDebut} – ${anneeDebut + NB_ANNEES - 1}`}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {periodes.map((p) => (
+                    <SelectItem key={p.debut} value={String(p.debut)}>
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </CardHeader>
           <CardContent className="pl-2">
-            {evolutionData.length === 0 ? (
+            {!hasEvolutionData ? (
               <div className="flex h-64 items-center justify-center text-sm text-muted-foreground border border-dashed rounded-lg bg-muted/20">
                 Aucune donnée disponible
               </div>
             ) : (
-              <div className="h-64 w-full mt-4">
+              <div
+                className={`h-64 w-full mt-4 transition-opacity ${
+                  evolutionLoading ? "opacity-50" : "opacity-100"
+                }`}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={evolutionData} margin={{ top: 10, right: 16, left: -16, bottom: 0 }}>
                     <XAxis
@@ -360,25 +449,70 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Pie Chart — Répartition par université */}
+        {/* Pie Chart — Répartition par université (5 max) */}
         <Card className="col-span-3 border-muted sm:col-span-4 md:col-span-3">
-          <CardHeader>
-            <CardTitle>Répartition par Université</CardTitle>
-            <CardDescription>
-              Distribution des mémoires validés par université.
-            </CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+            <div className="space-y-1.5">
+              <CardTitle>Répartition par Université</CardTitle>
+              <CardDescription>
+                Distribution des mémoires validés par université.
+              </CardDescription>
+            </div>
+            {chartOptions && chartOptions.universites.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs">
+                      Universités ({universitesChoisies.length}/{MAX_UNIVERSITES})
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent align="end" className="max-h-72 w-60 overflow-y-auto">
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="font-normal">
+                      {MAX_UNIVERSITES} universités maximum
+                    </DropdownMenuLabel>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  {chartOptions.universites.map((u) => {
+                    const checked = universitesChoisies.includes(u.id);
+                    const disabled = checked
+                      ? universitesChoisies.length === 1
+                      : universitesChoisies.length >= MAX_UNIVERSITES;
+
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={u.id}
+                        checked={checked}
+                        disabled={disabled}
+                        closeOnClick={false}
+                        onCheckedChange={(c) => handleToggleUniversite(u.id, c)}
+                      >
+                        <span className="flex-1 truncate">{u.label}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">{u.total}</span>
+                      </DropdownMenuCheckboxItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </CardHeader>
           <CardContent>
-            {repartitionData.length === 0 ? (
+            {repartition.length === 0 ? (
               <div className="flex h-64 items-center justify-center text-sm text-muted-foreground border border-dashed rounded-lg bg-muted/20">
                 Aucune donnée disponible
               </div>
             ) : (
-              <div className="h-64 w-full mt-4">
+              <div
+                className={`h-64 w-full mt-4 transition-opacity ${
+                  repartitionLoading ? "opacity-50" : "opacity-100"
+                }`}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={repartitionData}
+                      data={repartition}
                       dataKey="value"
                       nameKey="label"
                       cx="50%"
@@ -397,7 +531,7 @@ export default function DashboardPage() {
                               <span
                                 className="inline-block h-3 w-3"
                                 style={{
-                                  backgroundColor: pieColors[index % pieColors.length],
+                                  backgroundColor: PIE_COLORS[index % PIE_COLORS.length],
                                 }}
                               />
                               <span>{entry.value}</span>
