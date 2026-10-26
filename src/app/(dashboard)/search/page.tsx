@@ -286,9 +286,6 @@ export default function SemanticSearchPage() {
           setIsDetailOpen(false);
           setSelectedMemoireId(null);
         }}
-        onSelectSimilar={(id) => {
-          setSelectedMemoireId(id);
-        }}
       />
     </motion.div>
   );

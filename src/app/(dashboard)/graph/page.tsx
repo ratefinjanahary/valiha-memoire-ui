@@ -172,7 +172,6 @@ function GraphExplorer() {
         memoireId={detailId}
         isOpen={detailId !== null}
         onClose={handleCloseDetail}
-        onSelectSimilar={setDetailId}
       />
     </div>
   );
