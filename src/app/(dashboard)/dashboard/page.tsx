@@ -77,15 +77,13 @@ const MOIS = [
 const currentYear = new Date().getFullYear();
 const ANNEES = Array.from({ length: 6 }, (_, i) => currentYear - i);
 
-// Nuances dérivées de --primary: oklch(0.5106 0.2301 276.9656)
-// Même teinte (276.9656) : seules la luminosité et la chroma varient.
-// Index 0 = la plus grande part du camembert.
+// Nuances dérivées de --primary: oklch(0.7122 0.1809 21.6630)
 const PIE_COLORS = [
-  "oklch(0.3600 0.1700 276.9656)",
-  "oklch(0.5106 0.2301 276.9656)", // --primary
-  "oklch(0.6400 0.1900 276.9656)",
-  "oklch(0.7600 0.1300 276.9656)",
-  "oklch(0.8700 0.0700 276.9656)",
+  "oklch(0.4800 0.1600 21.6630)",
+  "oklch(0.5900 0.1850 21.6630)",
+  "oklch(0.7122 0.1809 21.6630)",
+  "oklch(0.8100 0.1200 21.6630)",
+  "oklch(0.9000 0.0600 21.6630)",
 ];
 
 const MyCustomPie = (props: PieSectorShapeProps) => (
@@ -583,7 +581,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         {/* Journal d'audit — à droite du treemap */}
-        <div className="col-span-full sm:col-span-4 md:col-span-3">
+        <div className="col-span-full sm:col-span-4">
           <AuditLogsTable  />
         </div>
       </div>

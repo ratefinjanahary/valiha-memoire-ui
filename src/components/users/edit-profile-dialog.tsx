@@ -151,7 +151,7 @@ export const EditProfileDialog: React.FC<EditProfileDialogProps> = ({ open, onOp
             {field("confirmPassword", "Confirmer le nouveau mot de passe", "password", "new-password")}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="grid grid-cols-2 gap-3 pt-6 pb-4">
             <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => onOpenChange(false)}>
               Annuler
             </Button>

@@ -80,19 +80,6 @@ export default function HeroPage() {
 
   return (
     <div className="relative isolate min-h-screen overflow-hidden bg-background flex flex-col">
-      {/* Animated gradient background */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
-      >
-        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-primary/10 blur-[120px] animate-pulse" />
-        <div className="absolute top-1/3 -right-32 w-[500px] h-[500px] rounded-full bg-indigo-500/8 blur-[100px] animate-pulse delay-700" />
-        <div className="absolute bottom-0 left-1/3 w-[400px] h-[400px] rounded-full bg-violet-500/8 blur-[100px] animate-pulse delay-1000" />
-      </div>
-
-      {/* Brume */}
-      <MistBackground />
-
       {/* Navbar */}
       <header className="w-full border-b border-border/50 bg-transparent sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">

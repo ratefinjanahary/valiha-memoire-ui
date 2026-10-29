@@ -79,27 +79,6 @@ export default function SemanticSearchPage() {
     >
       {/* Hero Section */}
       <motion.div variants={v.fadeUp} className="relative text-center py-8 px-4 rounded-lg">
-        {/* Brume */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute top-6 left-1/2 h-56 w-full max-w-xl -translate-x-1/2 opacity-75"
-        >
-          <motion.div
-            className="absolute left-[8%] top-2 h-44 w-44 rounded-full bg-primary/25 blur-3xl transform-gpu"
-            animate={{ x: [0, 40, 15, 0], y: [0, 15, 30, 0], scale: [1, 1.15, 0.95, 1] }}
-            transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <motion.div
-            className="absolute right-[8%] top-0 h-48 w-48 rounded-full bg-[oklch(0.5106_0.2301_330)]/20 blur-3xl transform-gpu"
-            animate={{ x: [0, -35, -10, 0], y: [0, 20, -10, 0], scale: [1, 0.9, 1.15, 1] }}
-            transition={{ duration: 17, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <motion.div
-            className="absolute left-1/2 bottom-0 -ml-20 h-36 w-40 rounded-full bg-primary/15 blur-3xl transform-gpu"
-            animate={{ x: [0, 30, -30, 0], y: [0, -15, 10, 0], scale: [1, 1.2, 1, 1] }}
-            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          />
-        </div>
 
         {/* Contenu du hero */}
         <motion.div variants={heroStagger} className="relative z-10 space-y-4">

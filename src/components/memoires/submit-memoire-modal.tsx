@@ -5,7 +5,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
-import { Loader2, UploadCloud } from "lucide-react";
+import { Loader2, FolderUp } from "lucide-react";
 
 import { memoireService } from "@/services/memoire.service";
 import { Universite, Domaine } from "@/types/memoire";
@@ -156,7 +156,7 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
       <DialogContent className="sm:max-w-150 md:max-w-200 max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b bg-muted/30">
           <DialogTitle className="flex items-center text-xl font-semibold">
-            <UploadCloud className="mr-2 h-5 w-5 text-primary" />
+            <FolderUp className="mr-2 h-5 w-5 text-primary" />
             Soumettre un mémoire
           </DialogTitle>
           <DialogDescription>

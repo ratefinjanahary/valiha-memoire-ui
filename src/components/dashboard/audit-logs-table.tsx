@@ -298,10 +298,7 @@ export function AuditLogsTable() {
                           <TableCell>
                             {log.user ? (
                               <div className="flex flex-col">
-                                <span className="text-sm font-medium">
-                                  {log.user.prenom} {log.user.nom}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-muted-foreground">
                                   {log.user.email}
                                 </span>
                               </div>
