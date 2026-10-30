@@ -183,7 +183,7 @@ export default function HeroPage() {
                 variants={featureCardVariants(i)}
                 initial="hidden"
                 animate="visible"
-                className="group relative rounded-md border border-border backdrop-blur-sm p-6 text-left overflow-hidden"
+                className="group relative rounded-lg border border-border backdrop-blur-sm p-6 text-left overflow-hidden"
               >
                 <div
                   aria-hidden

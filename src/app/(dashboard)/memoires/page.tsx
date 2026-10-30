@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { 
-  Search, ListCheck, Loader2, Plus, 
-  BookOpen, Calendar, GraduationCap, Building2 
+  Search, ListCheck, Loader2, Plus
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,6 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
 
 
 export default function MemoiresPage() {
@@ -114,7 +114,7 @@ export default function MemoiresPage() {
       {/* Grille de Mémoires */}
       {isLoading ? (
         <div className="flex justify-center items-center py-24">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Spinner className="h-6 w-6 text-primary" />
         </div>
       ) : memoires.length === 0 ? (
         <div className="text-center py-24 border rounded-md">

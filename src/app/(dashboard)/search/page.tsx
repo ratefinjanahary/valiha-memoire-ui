@@ -10,7 +10,7 @@ import { Memoire } from "@/types/memoire";
 import { MemoireCard } from "@/components/memoires/memoire-card";
 import { MemoireDetailModal } from "@/components/memoires/memoire-detail-modal";
 
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SemanticLoader } from "@/components/memoires/semantic-loader";
@@ -97,37 +97,36 @@ export default function SemanticSearchPage() {
             pour trouver les memoires les plus pertinents.
           </motion.p>
 
-          <motion.form variants={v.fadeUp} onSubmit={handleSemanticSearch} className="max-w-2xl mx-auto mt-8 flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-2.5 h-5 w-5 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Ex: Intelligence Artificielle..."
-                className="pl-11 h-10"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
+          <motion.form
+            variants={v.fadeUp}
+            onSubmit={handleSemanticSearch}
+            className="max-w-2xl mx-auto mt-8 rounded-xl border bg-card px-4 py-3 text-left transition-shadow focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/50"
+          >
+            <Textarea
+              rows={1}
+              placeholder="Ex: Intelligence Artificielle..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  handleSemanticSearch();
+                }
+              }}
+              className="min-h-10 max-h-40 resize-none border-0 dark:bg-transparent px-1 py-2 shadow-none focus-visible:ring-0"
+            />
+
+            <div className="mt-2 flex items-center justify-end">
+              <Button
+                type="submit"
+                size="icon"
+                className="h-10 w-10 rounded-full"
+                disabled={isSearching || !query.trim()}
+                aria-label="Rechercher"
+              >
+                {isSearching ? <Spinner className="h-4 w-4" /> : <Search className="h-4 w-4" />}
+              </Button>
             </div>
-            <Button
-              type="submit"
-              size="lg"
-              className="px-3 sm:px-8 h-10 relative overflow-hidden group"
-              disabled={isSearching || !query.trim()}
-              aria-label="Rechercher"
-            >
-              {/* shimmer inchangé */}
-              {isSearching ? (
-                <span className="relative flex items-center gap-2">
-                  <Spinner className="h-4 w-4" />
-                  <span className="hidden sm:inline">Analyse...</span>
-                </span>
-              ) : (
-                <>
-                  <Search className="h-4 w-4 sm:hidden relative" />
-                  <span className="hidden sm:inline">Rechercher</span>
-                </>
-              )}
-            </Button>
           </motion.form>
         </motion.div>
       </motion.div>

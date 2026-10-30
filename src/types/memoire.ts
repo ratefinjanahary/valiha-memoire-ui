@@ -73,7 +73,7 @@ export interface Memoire {
   auteurEmail?: string | null;
   statut: StatutMemoire;
   motifRejet?: string | null;
-  pdfUrl?: string;
+  pdfUrl?: string | null;
   universiteId?: string;
   domaineId?: string;
   auteurEncadreurId?: string | null;

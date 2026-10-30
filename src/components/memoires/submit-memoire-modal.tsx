@@ -38,7 +38,7 @@ import {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_FILE_TYPES = ["application/pdf"];
-const MAX_ENCADREURS = 5; // aligné sur l'API
+const MAX_ENCADREURS = 5;
 const MAX_MOTS_CLES = 10;
 
 const encadreurOptionSchema = z.object({
@@ -50,7 +50,7 @@ const encadreurOptionSchema = z.object({
 
 const formSchema = z.object({
   titre: z.string().min(5, "Le titre est requis"),
-  resume: z.string().min(10, "Un court résumé est requis"),
+  resume: z.string(),
   anneeSoutenance: z.coerce.number().min(2000).max(new Date().getFullYear()),
   typeDiplome: z.enum(["LICENCE", "MASTER", "DOCTORAT"]),
   auteurNom: z.string().min(2, "Nom requis"),
@@ -63,17 +63,23 @@ const formSchema = z.object({
     .min(1, "Au moins un encadreur est requis")
     .max(MAX_ENCADREURS, `${MAX_ENCADREURS} encadreurs maximum`),
   auteurEncadreur: encadreurOptionSchema.nullable(),
-  file: z.any()
-    .refine((files) => files?.length === 1, "Un fichier PDF est requis.")
-    .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, `Taille max: 5 Mo.`)
+  file: z
+    .any()
+    .refine((files) => !files?.length || files[0].size <= MAX_FILE_SIZE, "Taille max: 5 Mo.")
     .refine(
-      (files) => ACCEPTED_FILE_TYPES.includes(files?.[0]?.type),
-      "Seuls les fichiers PDF sont acceptés."
+      (files) => !files?.length || ACCEPTED_FILE_TYPES.includes(files[0].type),
+      "Seuls les fichiers PDF sont acceptés.",
     ),
   motsCles: z
   .array(z.string().trim().min(2).max(50).regex(/\p{L}/u, "Un mot-clé doit contenir au moins une lettre"))
   .max(MAX_MOTS_CLES, `${MAX_MOTS_CLES} mots-clés maximum`),
-});
+}).refine(
+    (v) => v.file?.length > 0 || v.resume.trim().length >= 10,
+    {
+      message: "Un résumé d'au moins 10 caractères est requis lorsqu'aucun PDF n'est joint",
+      path: ["resume"],
+    },
+  );
 
 interface SubmitMemoireModalProps {
   isOpen: boolean;
@@ -104,6 +110,9 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
     },
   });
 
+  const fichierChoisi = form.watch("file");
+  const aFichier = !!fichierChoisi?.length;
+
   // Chaque ComboBox exclut les choix de l'autre : un auteur ne peut pas être son propre encadreur
   const encadreursChoisis = form.watch("encadreurs");
   const auteurEncadreurChoisi = form.watch("auteurEncadreur");
@@ -122,9 +131,10 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
     
     try {
       const formData = new FormData();
-      formData.append("file", values.file[0]);
+      if (values.file?.length) formData.append("file", values.file[0]);
       formData.append("titre", values.titre);
-      formData.append("resume", values.resume);
+      const resume = values.resume.trim();
+      if (resume) formData.append("resume", resume);
       formData.append("anneeSoutenance", values.anneeSoutenance.toString());
       formData.append("typeDiplome", values.typeDiplome);
       formData.append("auteurNom", values.auteurNom);
@@ -185,7 +195,18 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
             )} />
 
             <Controller control={form.control} name="resume" render={({ field, fieldState }) => (
-              <Field><FieldLabel>Résumé</FieldLabel><FieldContent><Textarea className="h-24 resize-none" {...field} /></FieldContent><FieldError errors={[fieldState.error]} /></Field>
+              <Field>
+                <FieldLabel>Résumé{!aFichier && " *"}</FieldLabel>
+                <FieldContent>
+                  <Textarea className="h-24 resize-none" {...field} />
+                  <p className="text-xs text-muted-foreground">
+                    {aFichier
+                      ? "Facultatif : à défaut, il sera extrait du PDF."
+                      : "Obligatoire lorsqu'aucun PDF n'est joint."}
+                  </p>
+                </FieldContent>
+                <FieldError errors={[fieldState.error]} />
+              </Field>
             )} />
 
             <Controller control={form.control} name="motsCles" render={({ field, fieldState }) => (

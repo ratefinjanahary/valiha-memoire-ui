@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Check, Loader2, AlertTriangle,
-  Calendar, GraduationCap, FileText, ExternalLink, Pencil, Trash2,
+  Calendar, GraduationCap, Building2, BookOpen, ExternalLink, Pencil, Trash2,
   Eye, Clock, CheckCircle2, XCircle, PencilLine, MoreVertical
 } from "lucide-react";
 import { toast } from "sonner";
@@ -14,7 +14,7 @@ import { Memoire, StatutMemoire } from "@/types/memoire";
 import { EditMemoireDialog, getApiErrorMessage } from "@/components/memoires/edit-memoire-dialog";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -31,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
+import { Spinner } from "@/components/ui/spinner";
 
 type StatutFilter = StatutMemoire | "TOUS";
 
@@ -185,6 +186,17 @@ export default function ModerationPage() {
 
   const viewBadge = memoireToView ? STATUT_BADGE[memoireToView.statut] : null;
 
+  const capitalize = (str?: string) => {
+    if (!str) return "";
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  }
+
+  const truncateWords = (text: string, maxWords: number) => {
+    const words = text.trim().split(/\s+/);
+    if (words.length <= maxWords) return text;
+    return words.slice(0, maxWords).join(" ") + "…";
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -213,7 +225,7 @@ export default function ModerationPage() {
       {/* Liste des mémoires */}
       {isLoading ? (
         <div className="flex justify-center items-center py-24">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Spinner className="h-6 w-6 text-primary" />
         </div>
       ) : memoires.length === 0 ? (
         <div className="text-center py-24 border rounded-md flex flex-col items-center justify-center space-y-3">
@@ -229,118 +241,128 @@ export default function ModerationPage() {
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {memoires.map((memoire) => {
-              const { label, Icon } = STATUT_BADGE[memoire.statut];
-              const isValide = memoire.statut === "VALIDE";
+              const { label } = STATUT_BADGE[memoire.statut];
               const canModerate = memoire.statut === "EN_ATTENTE_MODERATION";
               const canRevalidate = memoire.statut === "REJETTE";
 
               return (
-                <Card key={memoire.id} className="overflow-hidden flex flex-col h-full">
-                  <div className="flex-1 p-3 flex flex-col">
-                    <div>
-                      {/* Statut, tags et année */}
-                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                <Card
+                  key={memoire.id}
+                  className="flex flex-col h-full overflow-hidden transition-all duration-300 group"
+                >
+                  <CardHeader className="pb-1 border-b">
+                    <div className="flex justify-between items-start gap-2 mb-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">
+                          {capitalize(memoire.typeDiplome)}
+                        </Badge>
                         <Badge variant="outline" className="font-semibold gap-1">
-                          <Icon className="w-3.5 h-3.5" />
                           {label}
                         </Badge>
-                        <Badge variant="outline" className="font-semibold lowercase">
-                          {memoire.typeDiplome}
-                        </Badge>
-                        {memoire.universite && (
-                          <Badge variant="outline" className="font-semibold">
-                            {memoire.universite.sigle}
-                          </Badge>
-                        )}
-                        <div className="flex items-center text-xs text-muted-foreground">
-                          <Calendar className="w-3 h-3 mr-1" />
-                          {memoire.anneeSoutenance}
-                        </div>
                       </div>
-
-                      {/* Titre */}
-                      <h3 className="font-bold text-md text-foreground line-clamp-1 mb-2">{memoire.titre}</h3>
-
-                      {/* Auteur */}
-                      <div className="text-sm text-muted-foreground flex items-center mb-4">
-                        <GraduationCap className="w-4 h-4 mr-2 text-primary" />
-                        <span>
-                          Auteur :{" "}
-                          <strong className="text-foreground">
-                            {memoire.auteurPrenom} {memoire.auteurNom}
-                          </strong>
-                        </span>
+                      <div className="flex items-center text-xs text-muted-foreground shrink-0">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {memoire.anneeSoutenance}
                       </div>
                     </div>
+                    <h3 className="font-semibold line-clamp-1" title={memoire.titre}>
+                      {memoire.titre}
+                    </h3>
+                    <div className="text-sm text-muted-foreground flex items-center mt-1">
+                      <GraduationCap className="w-4 h-4 mr-2" />
+                      {memoire.auteurPrenom} {memoire.auteurNom}
+                    </div>
+                  </CardHeader>
 
-                  {/* Actions */}
-                  <div className="mt-auto pt-4 border-t flex items-center justify-between gap-2">
-                    {memoire.pdfUrl ? (
-                      <a
-                        href={memoire.pdfUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center min-w-0 text-xs font-semibold text-primary hover:underline"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 mr-1 shrink-0" />
-                        <span className="truncate">Voir le document PDF</span>
-                      </a>
-                    ) : (
-                      <span className="text-xs text-muted-foreground italic">Aucun fichier PDF rattaché</span>
-                    )}
+                  <CardContent className="flex-1">
+                    <p className="text-sm text-muted-foreground">
+                      {memoire.resume ? truncateWords(memoire.resume, 12) : "Aucun résumé disponible."}
+                    </p>
+                  </CardContent>
 
-                    <div className="flex items-center gap-1 shrink-0">
-                      {(canModerate || canRevalidate) && (
-                        <Button
-                          className="px-3.5"
-                          size="sm"
-                          disabled={submittingId !== null}
-                          onClick={() => handleValidate(memoire.id)}
+                  <CardFooter className="pt-0 pb-4 flex flex-col items-start gap-3">
+                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      {memoire.universite && (
+                        <Badge variant="outline" className="py-3">
+                          <Building2 className="w-3 h-3 mr-1" />
+                          <span className="truncate max-w-30" title={memoire.universite.nom}>
+                            {memoire.universite.sigle || memoire.universite.nom}
+                          </span>
+                        </Badge>
+                      )}
+                      {memoire.domaine && (
+                        <Badge variant="outline" className="py-3">
+                          <BookOpen className="w-3 h-3 mr-1" />
+                          <span className="truncate max-w-30" title={memoire.domaine.nom}>
+                            {memoire.domaine.nom}
+                          </span>
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Actions de modération */}
+                    <div className="w-full pt flex items-center justify-between gap-2">
+                      {memoire.pdfUrl ? (
+                        <a
+                          href={memoire.pdfUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center min-w-0 text-xs font-semibold text-primary hover:underline"
                         >
-                          {submittingId === memoire.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : canRevalidate ? (
-                            "Revalider"
-                          ) : (
-                            "Valider"
-                          )}
-                        </Button>
+                          <ExternalLink className="w-3.5 h-3.5 mr-1 shrink-0" />
+                          <span className="truncate">Voir le document PDF</span>
+                        </a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Aucun fichier PDF rattaché</span>
                       )}
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          render={
-                            <Button variant="ghost" size="icon" title="Actions" disabled={submittingId !== null}>
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          }
-                        />
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setMemoireToView(memoire)}>
-                            <Eye className="w-4 h-4" /> Détails
-                          </DropdownMenuItem>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {(canModerate || canRevalidate) && (
+                          <Button
+                            variant="accent"
+                            className="px-3.5"
+                            size="sm"
+                            disabled={submittingId !== null}
+                            onClick={() => handleValidate(memoire.id)}
+                          >
+                            {submittingId === memoire.id ? (
+                              <Spinner className="w-4 h-4" />
+                            ) : canRevalidate ? (
+                              "Revalider"
+                            ) : (
+                              "Valider"
+                            )}
+                          </Button>
+                        )}
 
-                          {canModerate && (
-                            <DropdownMenuItem onClick={() => openRejectDialog(memoire.id)}>
-                              <XCircle className="w-4 h-4" /> Rejeter
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button variant="ghost" size="icon" title="Actions" disabled={submittingId !== null}>
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            }
+                          />
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setMemoireToView(memoire)}>
+                              <Eye className="w-4 h-4 mr-2" /> Détails
                             </DropdownMenuItem>
-                          )}
 
-                          {!isValide && (
-                            <>
-                              <DropdownMenuItem onClick={() => openEditDialog(memoire)}>
-                                <Pencil className="w-4 h-4" /> Modifier
-                              </DropdownMenuItem>
-                              <DropdownMenuItem variant="destructive" onClick={() => setMemoireToDelete(memoire)}>
-                                <Trash2 className="w-4 h-4" /> Supprimer
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <DropdownMenuItem onClick={() => openRejectDialog(memoire.id)}>
+                              <XCircle className="w-4 h-4 mr-2" /> Rejeter
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem onClick={() => openEditDialog(memoire)}>
+                              <Pencil className="w-4 h-4 mr-2" /> Modifier
+                            </DropdownMenuItem>
+                            <DropdownMenuItem variant="destructive" onClick={() => setMemoireToDelete(memoire)}>
+                              <Trash2 className="w-4 h-4 mr-2" /> Supprimer
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
-                  </div>
-                  </div>
+                  </CardFooter>
                 </Card>
               );
             })}
@@ -444,7 +466,7 @@ export default function ModerationPage() {
       </Dialog>
 
       <Dialog open={memoireToView !== null} onOpenChange={(o) => !o && setMemoireToView(null)}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-y-auto">
           {memoireToView && viewBadge && (
             <>
               <DialogHeader className="space-y-2">
@@ -467,9 +489,9 @@ export default function ModerationPage() {
                 </div>
               )}
 
-              <div className="bg-muted/50 p-3 rounded-md text-sm text-muted-foreground border border-muted">
+              <div className="bg-muted/50 p-3 rounded-md text-sm text-muted-foreground text-justify border border-muted">
                 <p className="font-semibold text-foreground/80 mb-1 flex items-center">
-                  <FileText className="w-4 h-4 mr-1.5" /> Résumé :
+                  Résumé :
                 </p>
                 {memoireToView.resume || "Aucun résumé fourni."}
               </div>

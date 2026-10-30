@@ -8,6 +8,12 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        accent:
+          "bg-primary/10 text-primary " +
+          "hover:bg-primary/20 hover:border-primary/50 " +
+          "aria-expanded:bg-primary/20 aria-expanded:text-primary " +
+          "focus-visible:border-primary/50 focus-visible:ring-primary/20 " +
+          "dark:bg-primary/15 dark:hover:bg-primary/25",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
@@ -15,7 +21,15 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+        "bg-destructive/10 text-destructive border-destructive/20 " +
+        "hover:bg-destructive/20 hover:border-destructive/30 " +
+        "focus-visible:border-destructive/40 focus-visible:ring-destructive/20 " +
+        "dark:bg-[oklch(from_var(--destructive)_calc(l_+_0.12)_c_h)]/20 " +
+        "dark:text-[oklch(from_var(--destructive)_calc(l_+_0.15)_c_h)] " +
+        "dark:border-[oklch(from_var(--destructive)_calc(l_+_0.12)_c_h)]/40 " +
+        "dark:hover:bg-[oklch(from_var(--destructive)_calc(l_+_0.12)_c_h)]/30 " +
+        "dark:hover:border-[oklch(from_var(--destructive)_calc(l_+_0.15)_c_h)]/60 " +
+        "dark:focus-visible:ring-[oklch(from_var(--destructive)_calc(l_+_0.15)_c_h)]/30",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
