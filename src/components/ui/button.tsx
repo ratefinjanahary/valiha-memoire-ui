@@ -10,7 +10,7 @@ const buttonVariants = cva(
         default: "bg-primary text-primary-foreground hover:bg-primary/80",
         accent:
           "bg-primary/10 text-primary " +
-          "hover:bg-primary/20 hover:border-primary/50 " +
+          "hover:bg-primary/20 " +
           "aria-expanded:bg-primary/20 aria-expanded:text-primary " +
           "focus-visible:border-primary/50 focus-visible:ring-primary/20 " +
           "dark:bg-primary/15 dark:hover:bg-primary/25",
