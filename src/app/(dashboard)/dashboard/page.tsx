@@ -581,7 +581,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         {/* Journal d'audit — à droite du treemap */}
-        <div className="col-span-full sm:col-span-4">
+        <div className="col-span-3 sm:col-span-4">
           <AuditLogsTable  />
         </div>
       </div>

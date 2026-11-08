@@ -4,12 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Calendar, GraduationCap, Building2, BookOpen, 
-  UserCheck, ChevronRight, Eye, Network, SquareArrowOutUpRight
+  UserCheck, Eye, Network, SquareArrowOutUpRight
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { memoireService } from "@/services/memoire.service";
-import { Memoire } from "@/types/memoire";
+import { Memoire, THESAURUS_LABELS } from "@/types/memoire";
 
 import {
   Dialog,DialogContent, DialogHeader, DialogTitle,
@@ -51,6 +51,12 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose }: MemoireDetail
       setMemoire(null);
     }
   }, [isOpen, memoireId, onClose]);
+
+  const thesaurusUtilises = [
+    ...new Set(
+      (memoire?.motsCles ?? []).flatMap(({ motCle }) => (motCle.thesaurus ? [motCle.thesaurus] : [])),
+    ),
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -160,15 +166,15 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose }: MemoireDetail
                     <h3 className="text-sm font-semibold text-foreground">Mots-clés</h3>
                     <div className="flex flex-wrap gap-1.5">
                       {memoire.motsCles.map(({ motCle }) =>
-                        motCle.isUnesco && motCle.unescoUri ? (
+                        motCle.thesaurus && motCle.descripteurUri ? (
                           <a
                             key={motCle.id}
-                            href={motCle.unescoUri}
+                            href={motCle.descripteurUri}
                             target="_blank"
                             rel="noopener noreferrer"
-                            title="Descripteur du Thésaurus de l'UNESCO"
+                            title={`Descripteur : ${THESAURUS_LABELS[motCle.thesaurus]}`}
                           >
-                            <Badge variant="violet-outline" className="text-xs font-normal gap-1 px-2.5 py-1 hover:bg-secondary/70">
+                            <Badge variant="primary-outline" className="text-xs gap-1 px-3 py-2 hover:bg-secondary/70">
                               {motCle.libelle}
                               <SquareArrowOutUpRight className="w-3 h-3" />
                             </Badge>
@@ -180,9 +186,10 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose }: MemoireDetail
                         ),
                       )}
                     </div>
-                    {memoire.motsCles.some(({ motCle }) => motCle.isUnesco) && (
+                    {thesaurusUtilises.length > 0 && (
                       <p className="text-[11px] text-muted-foreground">
-                        Les mots-clés avec icône sont des descripteurs du Thésaurus de l'UNESCO.
+                        Les mots-clés avec icône sont des descripteurs de thésaurus officiels (
+                        {thesaurusUtilises.map((t) => THESAURUS_LABELS[t]).join(", ")}).
                       </p>
                     )}
                   </div>

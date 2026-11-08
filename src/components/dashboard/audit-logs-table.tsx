@@ -43,6 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { toast } from "sonner";
 
 /* Helpers */
 /* "USER_LOGIN" -> "User login" (le code brut reste visible au survol) */
@@ -133,12 +134,17 @@ export function AuditLogsTable() {
 
   /* Suppression */
 
-  async function confirmDelete() {
+  const confirmDelete = async () => {
     if (!pending) return;
     const ids = pending;
+    const count = ids.length;
+
     setIsDeleting(true);
+    // On garde une référence pour pouvoir annuler en cas d'erreur
+    const snapshot = logs;
+
     try {
-      if (ids.length === 1) await analyticsService.deleteAuditLog(ids[0]);
+      if (count === 1) await analyticsService.deleteAuditLog(ids[0]);
       else await analyticsService.deleteAuditLogs(ids);
 
       // Retrait local immédiat : déclenche l'animation de sortie des lignes
@@ -146,12 +152,43 @@ export function AuditLogsTable() {
       setSelected(new Set());
       setPending(null);
 
+      // Toast de succès (unitaire ou groupé)
+      toast.success(
+        count === 1 ? "Entrée supprimée" : `${count} entrées supprimées`,
+        {
+          description:
+            count === 1
+              ? "L’action a bien été retirée du journal d’audit."
+              : "Les actions ont bien été retirées du journal d’audit.",
+        },
+      );
+
       // Puis resynchronisation (totaux, ligne qui remonte depuis la page suivante)
       await load(page);
     } catch (err) {
       console.error("Erreur suppression audit logs", err);
+
+      // Rollback local si on avait déjà retiré les lignes (ici on ne l'a pas fait,
+      // mais on garde le snapshot pour cohérence si on déplace le retrait local)
+      setLogs(snapshot);
       setError("La suppression a échoué. Réessayez.");
       setPending(null);
+
+      // Toast d'erreur avec bouton "Réessayer"
+      toast.error(
+        count === 1
+          ? "Échec de la suppression"
+          : `Échec de la suppression de ${count} entrées`,
+        {
+          description: "Une erreur est survenue. Vous pouvez réessayer.",
+          action: {
+            label: "Réessayer",
+            onClick: () => {
+              setPending(ids);
+            },
+          },
+        },
+      );
     } finally {
       setIsDeleting(false);
     }

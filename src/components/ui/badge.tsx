@@ -24,6 +24,8 @@ const badgeVariants = cva(
           "bg-[oklch(0.5106_0.2301_276.9656)]/10 text-[oklch(0.45_0.23_277)] [a]:hover:bg-[oklch(0.5106_0.2301_276.9656)]/20 dark:bg-[oklch(0.5106_0.2301_276.9656)]/20 dark:text-[oklch(0.78_0.13_277)] dark:[a]:hover:bg-[oklch(0.5106_0.2301_276.9656)]/30",
         "violet-outline":
           "border-[oklch(0.5106_0.2301_276.9656)]/40 text-[oklch(0.45_0.23_277)] [a]:hover:bg-[oklch(0.5106_0.2301_276.9656)]/10 dark:text-[oklch(0.78_0.13_277)]",
+        "primary-outline":
+          "border-[oklch(0.7122_0.1809_21.6630)]/40 text-[oklch(0.7122_0.1809_21.6630)] [a]:hover:bg-[oklch(0.7122_0.1809_21.6630)]/10 focus-visible:ring-[oklch(0.7122_0.1809_21.6630)]/40 dark:border-[oklch(0.7122_0.1809_21.6630)]/50 dark:text-[oklch(0.75_0.16_21.6630)]",
       },
     },
     defaultVariants: {

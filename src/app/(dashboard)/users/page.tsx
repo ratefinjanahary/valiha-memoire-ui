@@ -7,7 +7,6 @@ import {
   BookText, GraduationCap, Globe, CircleCheck, CircleX,
   type LucideIcon,
 } from "lucide-react";
-import { motion, AnimatePresence, type Variants } from "motion/react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -18,7 +17,15 @@ import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -46,7 +53,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Spinner } from "@/components/ui/spinner";
 
 interface AdminUser extends User {
   isActif?: boolean;
@@ -144,27 +150,45 @@ function IconTip({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Animations                                                         */
+/*  Chargement : lignes Skeleton qui reprennent la structure du tableau */
 /* ------------------------------------------------------------------ */
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.06, delayChildren: 0.05 },
-  },
-};
+const SKELETON = "bg-neutral-200";
 
-const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 20, scale: 0.97 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { type: "spring", stiffness: 260, damping: 22 },
-  },
-  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.15 } },
-};
+function UsersTableSkeleton({ rows }: { rows: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, i) => (
+        <TableRow key={i} className="hover:bg-transparent">
+          <TableCell>
+            <div className="flex items-center gap-3">
+              <Skeleton className={cn("size-8 shrink-0 rounded-md", SKELETON)} />
+              <div className="space-y-1.5">
+                <Skeleton className={cn("h-3.5 w-32", SKELETON)} />
+                <Skeleton className={cn("h-3 w-44", SKELETON)} />
+              </div>
+            </div>
+          </TableCell>
+          <TableCell>
+            <div className="flex items-center gap-2">
+              <Skeleton className={cn("size-4 rounded-full", SKELETON)} />
+              <Skeleton className={cn("hidden h-3.5 w-24 sm:block", SKELETON)} />
+            </div>
+          </TableCell>
+          <TableCell>
+            <Skeleton className={cn("size-4 rounded-full", SKELETON)} />
+          </TableCell>
+          <TableCell className="hidden md:table-cell">
+            <Skeleton className={cn("h-3.5 w-24", SKELETON)} />
+          </TableCell>
+          <TableCell className="text-right">
+            <Skeleton className={cn("ml-auto size-8 rounded-md", SKELETON)} />
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
+}
 
 const formatDate = (iso?: string) => {
   if (!iso) return "—";
@@ -284,6 +308,8 @@ export default function UsersManagementPage() {
     );
   }
 
+  const isEmpty = !isLoading && users.length === 0;
+
   return (
     <TooltipProvider>
       <div className="space-y-6 max-w-7xl mx-auto">
@@ -315,11 +341,7 @@ export default function UsersManagementPage() {
         </div>
 
         {/* Liste */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-24" aria-busy="true">
-            <Spinner className="size-6 text-primary" />
-          </div>
-        ) : users.length === 0 ? (
+        {isEmpty ? (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 bg-white py-16 text-center text-neutral-900">
             <SearchX className="h-8 w-8 text-neutral-400" />
             <p className="text-sm font-medium">Aucun utilisateur trouvé</p>
@@ -327,87 +349,106 @@ export default function UsersManagementPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <motion.div
-              key={`${page}-${search}`}
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-            >
-              <AnimatePresence mode="popLayout">
-                {users.map((u) => {
-                  const role = getRole(u.role);
-                  const RoleIcon = role.icon;
-                  const status = u.isActif !== false ? STATUS.actif : STATUS.inactif;
-                  const StatusIcon = status.icon;
-                  const isSelf = u.id === currentUser?.id;
+            <div className="overflow-hidden rounded-lg border">
+              <Table aria-busy={isLoading}>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Utilisateur</TableHead>
+                    <TableHead>Rôle</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead className="hidden md:table-cell">Inscrit le</TableHead>
+                    <TableHead className="w-12 text-right">
+                      <span className="sr-only">Actions</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
 
-                  return (
-                    <motion.div key={u.id} variants={cardVariants} layout exit="exit">
-                      <Card className="flex h-full flex-col gap-4 p-5">
-                        {/* En-tête : identité + menu d'actions */}
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-sm font-semibold uppercase text-primary">
-                              {u.prenom?.[0]}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="truncate text-sm font-semibold">
-                                  {u.prenom} {u.nom}
-                                </span>
-                                {isSelf && (
-                                  <Badge variant="outline">Vous</Badge>
-                                )}
+                <TableBody>
+                  {isLoading ? (
+                    <UsersTableSkeleton rows={limit} />
+                  ) : (
+                    users.map((u) => {
+                      const role = getRole(u.role);
+                      const RoleIcon = role.icon;
+                      const status = u.isActif !== false ? STATUS.actif : STATUS.inactif;
+                      const StatusIcon = status.icon;
+                      const isSelf = u.id === currentUser?.id;
+
+                      return (
+                        <TableRow key={u.id}>
+                          {/* Identité */}
+                          <TableCell>
+                            <div className="flex min-w-0 items-center gap-3">
+                              <div className="flex size-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold uppercase">
+                                {u.prenom?.[0]}
                               </div>
-                              <p className="truncate text-xs font-medium text-neutral-300">{u.email}</p>
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="truncate text-sm font-medium">
+                                    {u.prenom} {u.nom}
+                                  </span>
+                                  {isSelf && <Badge variant="outline">Vous</Badge>}
+                                </div>
+                                <p className="truncate text-xs font-medium text-neutral-400">{u.email}</p>
+                              </div>
                             </div>
-                          </div>
+                          </TableCell>
 
-                          <DropdownMenu>
-                            <DropdownMenuTrigger
-                              type="button"
-                              aria-label={`Actions pour ${u.prenom} ${u.nom}`}
-                              className="-mr-1.5 -mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-md text-neutral-500 outline-none transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-neutral-100"
-                            >
-                              <Ellipsis className="size-4" />
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuItem disabled={isSelf} onClick={() => handleOpenRoleChange(u)}>
-                                <Shield className="size-4" />
-                                Modifier le rôle
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                disabled={isSelf}
-                                onClick={() => handleOpenDelete(u)}
-                              >
-                                <Trash2 className="size-4" />
-                                Supprimer
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                          {/* Rôle */}
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <IconTip label={role.label} description={role.description} className="text-primary">
+                                <RoleIcon className="size-4" />
+                              </IconTip>
+                              <span className="hidden text-sm sm:inline">{role.label}</span>
+                            </div>
+                          </TableCell>
 
-                        {/* Pied : rôle + statut (icônes avec tooltip) et date */}
-                        <div className="mt-auto flex items-center justify-between gap-2 pt-3">
-                          <div className="flex items-center gap-1.5">
-                            <IconTip label={role.label} description={role.description} className="text-primary">
-                              <RoleIcon className="size-4" />
-                            </IconTip>
+                          {/* Statut */}
+                          <TableCell>
                             <IconTip label={status.label} description={status.description} className={status.tone}>
                               <StatusIcon className="size-4" />
                             </IconTip>
-                          </div>
-                          <span className="text-xs text-neutral-500">
-                            Inscrit le {formatDate(u.createdAt)}
-                          </span>
-                        </div>
-                      </Card>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </motion.div>
+                          </TableCell>
+
+                          {/* Date d'inscription */}
+                          <TableCell className="hidden text-xs text-neutral-500 md:table-cell">
+                            {formatDate(u.createdAt)}
+                          </TableCell>
+
+                          {/* Actions */}
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                type="button"
+                                aria-label={`Actions pour ${u.prenom} ${u.nom}`}
+                                className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-neutral-500 outline-none transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-neutral-100"
+                              >
+                                <Ellipsis className="size-4" />
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem disabled={isSelf} onClick={() => handleOpenRoleChange(u)}>
+                                  <Shield className="size-4" />
+                                  Modifier le rôle
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  disabled={isSelf}
+                                  onClick={() => handleOpenDelete(u)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="size-4" />
+                                  Supprimer
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
             {/* Pagination */}
             {totalPages > 1 && (
@@ -420,7 +461,7 @@ export default function UsersManagementPage() {
                     variant="outline"
                     size="icon"
                     aria-label="Page précédente"
-                    disabled={page <= 1}
+                    disabled={page <= 1 || isLoading}
                     onClick={() => setPage((p) => p - 1)}
                   >
                     <ChevronLeft className="size-4" />
@@ -432,7 +473,7 @@ export default function UsersManagementPage() {
                     variant="outline"
                     size="icon"
                     aria-label="Page suivante"
-                    disabled={page >= totalPages}
+                    disabled={page >= totalPages || isLoading}
                     onClick={() => setPage((p) => p + 1)}
                   >
                     <ChevronRight className="size-4" />

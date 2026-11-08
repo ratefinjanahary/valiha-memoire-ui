@@ -220,7 +220,7 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
                     max={MAX_MOTS_CLES}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Entrée ou virgule pour ajouter. Laissez vide : ils seront générés automatiquement.
+                    Entrée ou virgule pour ajouter. Laissez vide : ils seront générés automatiquement et alignés sur le thésaurus du domaine choisi.
                   </p>
                 </FieldContent>
                 <FieldError errors={[fieldState.error]} />

@@ -26,6 +26,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { KeywordsInput } from "@/components/memoires/keywords-input";
 
 const selectClass =
   "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
@@ -40,7 +41,7 @@ interface FormState {
   auteurEmail: string;
   universiteId: string;
   domaineId: string;
-  motsCles: string; // séparés par des virgules
+  motsCles: string[]; // séparés par des virgules
 }
 
 const keywordsOf = (m: Memoire) => (m.motsCles ?? []).map((x) => x.motCle.libelle);
@@ -55,14 +56,8 @@ const toForm = (m: Memoire): FormState => ({
   auteurEmail: m.auteurEmail ?? "",
   universiteId: m.universiteId ?? m.universite?.id ?? "",
   domaineId: m.domaineId ?? m.domaine?.id ?? "",
-  motsCles: keywordsOf(m).join(", "),
+  motsCles: keywordsOf(m),
 });
-
-const parseKeywords = (raw: string) =>
-  raw
-    .split(",")
-    .map((k) => k.trim())
-    .filter(Boolean);
 
 /** Message lisible depuis une erreur API (gère le format { errors: [{ champ, message }] } du ZodValidationPipe) */
 export function getApiErrorMessage(err: any, fallback: string) {
@@ -121,7 +116,7 @@ export function EditMemoireDialog({ memoire, open, onOpenChange, onSaved }: Prop
     if (form.universiteId !== original.universiteId) payload.universiteId = form.universiteId;
     if (form.domaineId !== original.domaineId) payload.domaineId = form.domaineId;
 
-    if (form.motsCles !== original.motsCles) payload.motsCles = parseKeywords(form.motsCles);
+    if (JSON.stringify(form.motsCles) !== JSON.stringify(original.motsCles)) payload.motsCles = form.motsCles;
 
     return payload;
   };
@@ -262,14 +257,13 @@ export function EditMemoireDialog({ memoire, open, onOpenChange, onSaved }: Prop
 
           <div className="grid gap-1.5">
             <Label htmlFor="motsCles">Mots-clés</Label>
-            <Input
-              id="motsCles"
+            <KeywordsInput
               value={form.motsCles}
-              onChange={(e) => set("motsCles", e.target.value)}
-              placeholder="intelligence artificielle, agriculture, madagascar"
+              onChange={(v) => set("motsCles", v)}
+              max={10}
             />
             <p className="text-xs text-muted-foreground">
-              Séparés par des virgules (10 max). Vide = régénérés automatiquement à partir du titre et du résumé.
+              Entrée ou virgule pour ajouter (10 max). Tout retirer = régénérés automatiquement (titre + résumé) et alignés sur le thésaurus du domaine. Changer le domaine seul ne recalcule pas les mots-clés.
             </p>
           </div>
 

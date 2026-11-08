@@ -11,11 +11,23 @@ export interface Domaine {
   description?: string;
 }
 
+export type Thesaurus = "UNESCO" | "EUROVOC" | "RAMEAU" | "AGROVOC" | "MESH" | "GETTY_AAT";
+
+export const THESAURUS_LABELS: Record<Thesaurus, string> = {
+  UNESCO: "Thésaurus de l'UNESCO",
+  EUROVOC: "EuroVoc (Union européenne)",
+  RAMEAU: "RAMEAU (BnF)",
+  AGROVOC: "AGROVOC (FAO)",
+  MESH: "MeSH (Inserm / Inist-CNRS)",
+  GETTY_AAT: "Art & Architecture Thesaurus (Getty)",
+};
+
 export interface MotCle {
   id: string;
   libelle: string;
-  unescoUri?: string | null;
-  isUnesco?: boolean;
+  descripteurUri?: string | null;
+  /** null/absent = mot-clé libre (pas de descripteur) */
+  thesaurus?: Thesaurus | null;
 }
 
 export interface Encadreur {

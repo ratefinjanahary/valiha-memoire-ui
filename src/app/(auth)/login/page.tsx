@@ -183,7 +183,6 @@ export default function LoginPage() {
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                       tabIndex={-1}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -200,6 +199,14 @@ export default function LoginPage() {
                     </motion.p>
                   )}
                 </motion.div>
+                <motion.div variants={itemVariants} className="text-right">
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-muted-foreground hover:text-primary hover:underline"
+                  >
+                    Mot de passe oublié ?
+                  </Link>
+                </motion.div>
 
                 <motion.div
                   variants={itemVariants}
@@ -209,7 +216,7 @@ export default function LoginPage() {
                     size="lg"
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full mt-4 relative overflow-hidden group"
+                    className="w-full mt-2 relative overflow-hidden group"
                   >
                     {isSubmitting ? (
                       <>

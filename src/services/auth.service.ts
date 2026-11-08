@@ -13,6 +13,16 @@ export const authService = {
     return data;
   },
 
+  forgotPassword: async (email: string) => {
+    const { data } = await api.post<{ message: string }>('/auth/forgot-password', { email });
+    return data;
+  },
+
+  resetPassword: async (payload: { token: string; newPassword: string }) => {
+    const { data } = await api.post<{ message: string }>('/auth/reset-password', payload);
+    return data;
+  },
+
   getProfile: async () => {
     const { data } = await api.get<User>('/auth/profile');
     return data;
