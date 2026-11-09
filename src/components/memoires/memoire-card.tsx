@@ -18,13 +18,15 @@ export function MemoireCard({ memoire, onClick }: MemoireCardProps) {
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   }
   const relevancePercent =
-    memoire.jaccardScore != null ? Math.round(memoire.jaccardScore * 100) : null;
+    memoire.similarity != null
+      ? Math.max(0, Math.min(100, Math.round(memoire.similarity * 100)))
+      : null;
 
-    const truncateWords = (text: string, maxWords: number) => {
-      const words = text.trim().split(/\s+/);
-      if (words.length <= maxWords) return text;
-      return words.slice(0, maxWords).join(" ") + "…";
-    };
+  const truncateWords = (text: string, maxWords: number) => {
+    const words = text.trim().split(/\s+/);
+    if (words.length <= maxWords) return text;
+    return words.slice(0, maxWords).join(" ") + "…";
+  };
 
   return (
     <Card
@@ -79,7 +81,7 @@ export function MemoireCard({ memoire, onClick }: MemoireCardProps) {
         </div>
         
 
-        {/* Uniquement en recherche sémantique (jaccardScore présent) */}
+        {/* Uniquement en recherche sémantique (similarity présent) */}
         {relevancePercent !== null && (
           <div className="w-full space-y-1">
             <div className="flex items-center justify-between text-[11px] text-muted-foreground">

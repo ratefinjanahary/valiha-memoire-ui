@@ -198,14 +198,14 @@ export default function LoginPage() {
                       {errors.password.message}
                     </motion.p>
                   )}
-                </motion.div>
-                <motion.div variants={itemVariants} className="text-right">
-                  <Link
-                    href="/forgot-password"
-                    className="text-xs text-muted-foreground hover:text-primary hover:underline"
-                  >
-                    Mot de passe oublié ?
-                  </Link>
+                  <div className="text-right pt-1">
+                    <Link
+                      href="/forgot-password"
+                      className="text-xs text-muted-foreground hover:text-primary hover:underline"
+                    >
+                      Mot de passe oublié ?
+                    </Link>
+                  </div>
                 </motion.div>
 
                 <motion.div
@@ -216,7 +216,7 @@ export default function LoginPage() {
                     size="lg"
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full mt-2 relative overflow-hidden group"
+                    className="w-full relative overflow-hidden group"
                   >
                     {isSubmitting ? (
                       <>

@@ -17,7 +17,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
   TableBody,
@@ -155,41 +155,6 @@ function IconTip({
 
 const SKELETON = "bg-neutral-200";
 
-function UsersTableSkeleton({ rows }: { rows: number }) {
-  return (
-    <>
-      {Array.from({ length: rows }).map((_, i) => (
-        <TableRow key={i} className="hover:bg-transparent">
-          <TableCell>
-            <div className="flex items-center gap-3">
-              <Skeleton className={cn("size-8 shrink-0 rounded-md", SKELETON)} />
-              <div className="space-y-1.5">
-                <Skeleton className={cn("h-3.5 w-32", SKELETON)} />
-                <Skeleton className={cn("h-3 w-44", SKELETON)} />
-              </div>
-            </div>
-          </TableCell>
-          <TableCell>
-            <div className="flex items-center gap-2">
-              <Skeleton className={cn("size-4 rounded-full", SKELETON)} />
-              <Skeleton className={cn("hidden h-3.5 w-24 sm:block", SKELETON)} />
-            </div>
-          </TableCell>
-          <TableCell>
-            <Skeleton className={cn("size-4 rounded-full", SKELETON)} />
-          </TableCell>
-          <TableCell className="hidden md:table-cell">
-            <Skeleton className={cn("h-3.5 w-24", SKELETON)} />
-          </TableCell>
-          <TableCell className="text-right">
-            <Skeleton className={cn("ml-auto size-8 rounded-md", SKELETON)} />
-          </TableCell>
-        </TableRow>
-      ))}
-    </>
-  );
-}
-
 const formatDate = (iso?: string) => {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -223,7 +188,10 @@ export default function UsersManagementPage() {
   const fetchUsers = async (currentPage = page, searchQuery = search) => {
     setIsLoading(true);
     try {
-      const response = await authService.getUsers(currentPage, limit, searchQuery || undefined);
+      const [response] = await Promise.all([
+        authService.getUsers(currentPage, limit, searchQuery || undefined),
+        new Promise((resolve) => setTimeout(resolve, 700)),
+      ]);
       setUsers(response.items as AdminUser[]);
       setTotal(response.total);
       setTotalPages(response.totalPages);
@@ -349,7 +317,7 @@ export default function UsersManagementPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="overflow-hidden rounded-lg border">
+            <div className="overflow-hidden">
               <Table aria-busy={isLoading}>
                 <TableHeader>
                   <TableRow>
@@ -365,7 +333,13 @@ export default function UsersManagementPage() {
 
                 <TableBody>
                   {isLoading ? (
-                    <UsersTableSkeleton rows={limit} />
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={5} className="h-64 text-center">
+                        <div className="flex items-center justify-center">
+                          <Spinner className="size-5 text-primary" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ) : (
                     users.map((u) => {
                       const role = getRole(u.role);

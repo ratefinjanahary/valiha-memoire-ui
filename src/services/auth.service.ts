@@ -13,6 +13,7 @@ export const authService = {
     return data;
   },
 
+  /* Flux par lien */
   forgotPassword: async (email: string) => {
     const { data } = await api.post<{ message: string }>('/auth/forgot-password', { email });
     return data;
@@ -23,6 +24,17 @@ export const authService = {
     return data;
   },
 
+  /* Flux par code OTP */
+  forgotPasswordOtp: async (email: string) => {
+    const { data } = await api.post<{ message: string }>('/auth/forgot-password-otp', { email });
+    return data;
+  },
+
+  resetPasswordOtp: async (payload: { email: string; code: string; newPassword: string }) => {
+    const { data } = await api.post<{ message: string }>('/auth/reset-password-otp', payload);
+    return data;
+  },
+  
   getProfile: async () => {
     const { data } = await api.get<User>('/auth/profile');
     return data;

@@ -7,7 +7,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { authService } from "@/services/auth.service";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { forgotPasswordSchema, type ForgotPasswordFormData } from "@/lib/validators/pswd-reset";
+import { forgotPasswordSchema, type ForgotPasswordFormData } from "@/lib/validators/password-reset";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,10 +97,13 @@ export default function ForgotPasswordPage() {
                         "Envoyer le lien"
                       )}
                     </Button>
+                    <Link href="/reset-password-otp" className="text-primary hover:underline">
+                      Recevoir un code à la place
+                    </Link>
                   </form>
 
-                  <div className="mt-6 text-center text-muted-foreground">
-                    <Link href="/login" className="text-primary hover:underline">
+                  <div className="mt-4 text-center text-muted-foreground">
+                    <Link href="/login" className="text-muted-foreground hover:underline">
                       Retour à la connexion
                     </Link>
                   </div>

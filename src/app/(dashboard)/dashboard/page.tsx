@@ -18,9 +18,9 @@ import {
   XCircle,
   ChevronDown,
   LucideIcon,
-  BookCheck,
-  BookAlert,
-  BookSearch,
+  BookOpenCheck,
+  Clock,
+  FileSearchCorner,
 } from "lucide-react";
 
 import {
@@ -106,13 +106,13 @@ const kpiConfig: {
     key: "totalMemoires",
     title: "Mémoires Validés",
     description: "Mémoires publiés et accessibles",
-    icon: BookCheck,
+    icon: BookOpenCheck,
   },
   {
     key: "enAttente",
     title: "En attente de modération",
     description: "Soumissions en cours d'examen",
-    icon: BookAlert,
+    icon: Clock,
   },
   {
     key: "rejetes",
@@ -124,7 +124,7 @@ const kpiConfig: {
     key: "totalConsultations",
     title: "Consultations",
     description: "Total des vues de mémoires",
-    icon: BookSearch,
+    icon: FileSearchCorner,
     format: (v) => v.toLocaleString(),
   },
 ];

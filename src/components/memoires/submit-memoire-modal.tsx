@@ -4,13 +4,19 @@ import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { toast } from "sonner";
-import { Loader2, FolderUp } from "lucide-react";
+import { ArrowUpFromLine } from "lucide-react";
 
 import { memoireService } from "@/services/memoire.service";
 import { Universite, Domaine } from "@/types/memoire";
 import { EncadreurCombobox } from "@/components/encadreurs/encadreur-combobox";
 import { KeywordsInput } from "@/components/memoires/keywords-input";
+import { SubmitProcessingView } from "@/components/memoires/submit-processing-view";
+import {
+  buildSubmissionSteps,
+  type SubmissionStatus,
+  type SubmissionStep,
+} from "@/hooks/use-submission-steps";
+import { cn } from "@/lib/utils";
 
 import {
   Dialog,
@@ -87,10 +93,32 @@ interface SubmitMemoireModalProps {
   onSuccess: () => void;
 }
 
+const TYPE_DIPLOME_LABELS = {
+  LICENCE: "Licence",
+  MASTER: "Master",
+  DOCTORAT: "Doctorat",
+} as const;
+
+// Sigle + nom complet, ou nom seul si pas de sigle
+const UniversiteLabel = ({ u }: { u: Universite }) => {
+  return u.sigle ? (
+    <span className="truncate">
+      <span className="font-medium">{u.sigle}</span>
+      <span className="text-muted-foreground"> — {u.nom}</span>
+    </span>
+  ) : (
+    <span className="truncate">{u.nom}</span>
+  );
+}
+
 export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoireModalProps) {
   const [universites, setUniversites] = useState<Universite[]>([]);
   const [domaines, setDomaines] = useState<Domaine[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // "form" : formulaire visible | "processing" : écran de traitement (running / done / error)
+  const [phase, setPhase] = useState<"form" | "processing">("form");
+  const [processStatus, setProcessStatus] = useState<SubmissionStatus>("running");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [steps, setSteps] = useState<SubmissionStep[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -119,6 +147,9 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
 
   useEffect(() => {
     if (isOpen) {
+      setPhase("form");
+      setProcessStatus("running");
+      setErrorMessage(null);
       memoireService.getUniversites().then(setUniversites).catch(console.error);
       memoireService.getDomaines().then(setDomaines).catch(console.error);
     } else {
@@ -127,7 +158,17 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
   }, [isOpen, form]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsSubmitting(true);
+    // Le formulaire reste monté (masqué) : en cas d'erreur, on retrouve les valeurs et le PDF choisi
+    setSteps(
+      buildSubmissionSteps({
+        hasFile: !!values.file?.length,
+        hasResume: values.resume.trim().length > 0,
+        hasKeywords: values.motsCles.length > 0,
+      }),
+    );
+    setErrorMessage(null);
+    setProcessStatus("running");
+    setPhase("processing");
     
     try {
       const formData = new FormData();
@@ -151,30 +192,72 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
 
       await memoireService.submit(formData);
       
-      toast.success("Mémoire soumis avec succès ! Il est en attente de modération.");
-      onSuccess();
-      onClose();
+      setProcessStatus("done");
+      onSuccess(); // rafraîchit la liste en arrière-plan ; l'utilisateur ferme via le bouton « Fermer »
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Erreur lors de la soumission");
-    } finally {
-      setIsSubmitting(false);
+      const message = error.response?.data?.message;
+      setErrorMessage(
+        (Array.isArray(message) ? message.join(", ") : message) || "Erreur lors de la soumission",
+      );
+      setProcessStatus("error");
     }
   };
 
+  // Verrouillé tant que le serveur travaille : pas de fermeture accidentelle
+  const locked = phase === "processing" && processStatus === "running";
+
+  useEffect(() => {
+    if (!locked) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [locked]);
+
+  const header =
+    phase === "form"
+      ? {
+          title: "Soumettre un mémoire",
+          description: "Remplissez les informations et joignez le PDF de votre mémoire (facultatif).",
+        }
+      : processStatus === "error"
+        ? { title: "Échec de la soumission", description: "Vos informations sont conservées." }
+        : processStatus === "done"
+          ? { title: "Mémoire soumis", description: "Votre mémoire a bien été enregistré." }
+          : { title: "Traitement de votre mémoire", description: "Merci de patienter, ne fermez pas cette fenêtre." };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-150 md:max-w-200 max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+    <Dialog open={isOpen} onOpenChange={(open) => {
+        if (!open && !locked) onClose();
+      }}
+    >
+      <DialogContent
+        showCloseButton={!locked}
+        className="sm:max-w-150 md:max-w-200 max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden"
+      >
         <DialogHeader className="px-6 py-4 border-b bg-muted/30">
           <DialogTitle className="flex items-center text-xl font-semibold">
-            <FolderUp className="mr-2 h-5 w-5 text-primary" />
-            Soumettre un mémoire
+            <ArrowUpFromLine className="mr-2 h-5 w-5 text-primary" />
+            {header.title}
           </DialogTitle>
-          <DialogDescription>
-            Remplissez les informations et téléversez le document PDF de votre mémoire.
-          </DialogDescription>
+          <DialogDescription>{header.description}</DialogDescription>
         </DialogHeader>
-        
-        <div className="flex-1 min-h-0 overflow-y-auto p-6">
+
+        {phase === "processing" && (
+          <SubmitProcessingView
+            steps={steps}
+            status={processStatus}
+            errorMessage={errorMessage}
+            onBackToForm={() => setPhase("form")}
+            onRetry={() => form.handleSubmit(onSubmit)()}
+            onClose={onClose}
+          />
+        )}
+
+        {/* Toujours monté (juste masqué) pour ne pas perdre les valeurs ni le PDF choisi */}
+        <div className={cn("flex-1 min-h-0 overflow-y-auto p-6", phase !== "form" && "hidden")}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pr-4">
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -201,7 +284,7 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
                   <Textarea className="h-24 resize-none" {...field} />
                   <p className="text-xs text-muted-foreground">
                     {aFichier
-                      ? "Facultatif : à défaut, il sera extrait du PDF."
+                      ? "Facultatif : à défaut, il sera généré automatiquement à partir du PDF."
                       : "Obligatoire lorsqu'aucun PDF n'est joint."}
                   </p>
                 </FieldContent>
@@ -228,26 +311,41 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
             )} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Controller control={form.control} name="universiteId" render={({ field, fieldState }) => (
-                <Field>
-                  <FieldLabel>Université</FieldLabel>
-                  <FieldContent>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <SelectTrigger><SelectValue placeholder="Sélectionnez..." /></SelectTrigger>
-                      <SelectContent>
-                        {universites.map((u) => (<SelectItem key={u.id} value={u.id}>{u.sigle || u.nom}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
-                  </FieldContent>
-                  <FieldError errors={[fieldState.error]} />
-                </Field>
-              )} />
+              <Controller control={form.control} name="universiteId" render={({ field, fieldState }) => {
+                const selected = universites.find((u) => u.id === field.value);
+                return (
+                  <Field>
+                    <FieldLabel>Université</FieldLabel>
+                    <FieldContent>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Sélectionnez...">
+                            {selected && <UniversiteLabel u={selected} />}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {universites.map((u) => (
+                            <SelectItem key={u.id} value={u.id}>
+                              <UniversiteLabel u={u} />
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FieldContent>
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                );
+              }} />
               <Controller control={form.control} name="domaineId" render={({ field, fieldState }) => (
                 <Field>
                   <FieldLabel>Domaine</FieldLabel>
                   <FieldContent>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <SelectTrigger><SelectValue placeholder="Sélectionnez..." /></SelectTrigger>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionnez...">
+                          {domaines.find((d) => d.id === field.value)?.nom}
+                        </SelectValue>
+                      </SelectTrigger>
                       <SelectContent>
                         {domaines.map((d) => (<SelectItem key={d.id} value={d.id}>{d.nom}</SelectItem>))}
                       </SelectContent>
@@ -334,13 +432,10 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
             )} />
 
             <div className="grid grid-cols-2 gap-3 pt-6 pb-2">
-              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+              <Button type="button" variant="outline" onClick={onClose}>
                 Annuler
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Soumettre
-              </Button>
+              <Button type="submit">Soumettre</Button>
             </div>
           </form>
         </div>
