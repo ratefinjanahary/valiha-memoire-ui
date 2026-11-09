@@ -8,7 +8,7 @@ import { motion } from "motion/react";
 import { Eye, EyeOff } from "lucide-react";
 import { authService } from "@/services/auth.service";
 import { getApiErrorMessage } from "@/lib/api-error";
-import { resetPasswordSchema, type ResetPasswordFormData } from "@/lib/validators/pswd-reset";
+import { resetPasswordSchema, type ResetPasswordFormData } from "@/lib/validators/password-reset";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
