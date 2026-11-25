@@ -2,11 +2,12 @@
 
 import { useState, useEffect, type ReactNode } from "react";
 import {
-  Loader2, Search, SearchX, Trash2, Shield, UserStar, Ellipsis,
+  Loader2, Search, UserX, Trash2, Shield, UserStar, Ellipsis,
   ChevronLeft, ChevronRight, AlertTriangle,
   BookText, GraduationCap, Globe, CircleCheck, CircleX,
   type LucideIcon,
 } from "lucide-react";
+import { motion, AnimatePresence, type Variants } from "motion/react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -17,15 +18,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +46,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
 
 interface AdminUser extends User {
   isActif?: boolean;
@@ -150,10 +144,27 @@ function IconTip({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Chargement : lignes Skeleton qui reprennent la structure du tableau */
+/*  Animations                                                         */
 /* ------------------------------------------------------------------ */
 
-const SKELETON = "bg-neutral-200";
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.06, delayChildren: 0.05 },
+  },
+};
+
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 20, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: "spring", stiffness: 260, damping: 22 },
+  },
+  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.15 } },
+};
 
 const formatDate = (iso?: string) => {
   if (!iso) return "—";
@@ -188,10 +199,7 @@ export default function UsersManagementPage() {
   const fetchUsers = async (currentPage = page, searchQuery = search) => {
     setIsLoading(true);
     try {
-      const [response] = await Promise.all([
-        authService.getUsers(currentPage, limit, searchQuery || undefined),
-        new Promise((resolve) => setTimeout(resolve, 700)),
-      ]);
+      const response = await authService.getUsers(currentPage, limit, searchQuery || undefined);
       setUsers(response.items as AdminUser[]);
       setTotal(response.total);
       setTotalPages(response.totalPages);
@@ -276,8 +284,6 @@ export default function UsersManagementPage() {
     );
   }
 
-  const isEmpty = !isLoading && users.length === 0;
-
   return (
     <TooltipProvider>
       <div className="space-y-6 max-w-7xl mx-auto">
@@ -304,125 +310,104 @@ export default function UsersManagementPage() {
                 className="pl-9"
               />
             </div>
-            <Button type="submit">Rechercher</Button>
+            <Button type="submit" variant="outline">Rechercher</Button>
           </form>
         </div>
 
         {/* Liste */}
-        {isEmpty ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-24" aria-busy="true">
+            <Spinner className="size-6 text-primary" />
+          </div>
+        ) : users.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 bg-white py-16 text-center text-neutral-900">
-            <SearchX className="h-8 w-8 text-neutral-400" />
+            <UserX className="h-8 w-8 text-neutral-400" />
             <p className="text-sm font-medium">Aucun utilisateur trouvé</p>
             <p className="text-sm text-neutral-500">Essayez avec un autre nom ou une autre adresse email.</p>
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="overflow-hidden">
-              <Table aria-busy={isLoading}>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Utilisateur</TableHead>
-                    <TableHead>Rôle</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead className="hidden md:table-cell">Inscrit le</TableHead>
-                    <TableHead className="w-12 text-right">
-                      <span className="sr-only">Actions</span>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
+            <motion.div
+              key={`${page}-${search}`}
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              <AnimatePresence mode="popLayout">
+                {users.map((u) => {
+                  const role = getRole(u.role);
+                  const RoleIcon = role.icon;
+                  const status = u.isActif !== false ? STATUS.actif : STATUS.inactif;
+                  const StatusIcon = status.icon;
+                  const isSelf = u.id === currentUser?.id;
 
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={5} className="h-64 text-center">
-                        <div className="flex items-center justify-center">
-                          <Spinner className="size-5 text-primary" />
+                  return (
+                    <motion.div key={u.id} variants={cardVariants} layout exit="exit">
+                      <Card className="flex h-full flex-col gap-4 p-5">
+                        {/* En-tête : identité + menu d'actions */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex size-8 shrink-0 items-center justify-center rounded-md border dark:border-card text-sm font-semibold uppercase">
+                              {u.prenom?.[0]}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="truncate text-sm font-semibold">
+                                  {u.prenom} {u.nom}
+                                </span>
+                                {isSelf && (
+                                  <Badge variant="outline">Vous</Badge>
+                                )}
+                              </div>
+                              <p className="truncate text-xs font-medium text-neutral-300">{u.email}</p>
+                            </div>
+                          </div>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              type="button"
+                              aria-label={`Actions pour ${u.prenom} ${u.nom}`}
+                              className="-mr-1.5 -mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-md text-neutral-500 outline-none transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-neutral-100"
+                            >
+                              <Ellipsis className="size-4" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem disabled={isSelf} onClick={() => handleOpenRoleChange(u)}>
+                                <Shield className="size-4" />
+                                Modifier le rôle
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={isSelf}
+                                onClick={() => handleOpenDelete(u)}
+                              >
+                                <Trash2 className="size-4" />
+                                Supprimer
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    users.map((u) => {
-                      const role = getRole(u.role);
-                      const RoleIcon = role.icon;
-                      const status = u.isActif !== false ? STATUS.actif : STATUS.inactif;
-                      const StatusIcon = status.icon;
-                      const isSelf = u.id === currentUser?.id;
 
-                      return (
-                        <TableRow key={u.id}>
-                          {/* Identité */}
-                          <TableCell>
-                            <div className="flex min-w-0 items-center gap-3">
-                              <div className="flex size-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold uppercase">
-                                {u.prenom?.[0]}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="truncate text-sm font-medium">
-                                    {u.prenom} {u.nom}
-                                  </span>
-                                  {isSelf && <Badge variant="outline">Vous</Badge>}
-                                </div>
-                                <p className="truncate text-xs font-medium text-neutral-400">{u.email}</p>
-                              </div>
-                            </div>
-                          </TableCell>
-
-                          {/* Rôle */}
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <IconTip label={role.label} description={role.description} className="text-primary">
-                                <RoleIcon className="size-4" />
-                              </IconTip>
-                              <span className="hidden text-sm sm:inline">{role.label}</span>
-                            </div>
-                          </TableCell>
-
-                          {/* Statut */}
-                          <TableCell>
+                        {/* Pied : rôle + statut (icônes avec tooltip) et date */}
+                        <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+                          <div className="flex items-center gap-1.5">
+                            <IconTip label={role.label} description={role.description} className="text-muted-foreground">
+                              <RoleIcon className="size-4" />
+                            </IconTip>
                             <IconTip label={status.label} description={status.description} className={status.tone}>
                               <StatusIcon className="size-4" />
                             </IconTip>
-                          </TableCell>
-
-                          {/* Date d'inscription */}
-                          <TableCell className="hidden text-xs text-neutral-500 md:table-cell">
-                            {formatDate(u.createdAt)}
-                          </TableCell>
-
-                          {/* Actions */}
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                type="button"
-                                aria-label={`Actions pour ${u.prenom} ${u.nom}`}
-                                className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-neutral-500 outline-none transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-neutral-100"
-                              >
-                                <Ellipsis className="size-4" />
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem disabled={isSelf} onClick={() => handleOpenRoleChange(u)}>
-                                  <Shield className="size-4" />
-                                  Modifier le rôle
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  disabled={isSelf}
-                                  onClick={() => handleOpenDelete(u)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="size-4" />
-                                  Supprimer
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                          </div>
+                          <span className="text-xs text-neutral-500">
+                            Inscrit le {formatDate(u.createdAt)}
+                          </span>
+                        </div>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </motion.div>
 
             {/* Pagination */}
             {totalPages > 1 && (
@@ -435,7 +420,7 @@ export default function UsersManagementPage() {
                     variant="outline"
                     size="icon"
                     aria-label="Page précédente"
-                    disabled={page <= 1 || isLoading}
+                    disabled={page <= 1}
                     onClick={() => setPage((p) => p - 1)}
                   >
                     <ChevronLeft className="size-4" />
@@ -447,7 +432,7 @@ export default function UsersManagementPage() {
                     variant="outline"
                     size="icon"
                     aria-label="Page suivante"
-                    disabled={page >= totalPages || isLoading}
+                    disabled={page >= totalPages}
                     onClick={() => setPage((p) => p + 1)}
                   >
                     <ChevronRight className="size-4" />

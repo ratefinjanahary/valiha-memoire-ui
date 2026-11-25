@@ -154,7 +154,7 @@ function GraphExplorer() {
             />
 
             {selectedNode && (
-              <div className="absolute inset-y-3 right-3 w-80 max-w-[calc(100%-1.5rem)]">
+              <div className="pointer-events-none absolute inset-y-3 right-3 flex w-80 max-w-[calc(100%-1.5rem)] flex-col">
                 <GraphNodePanel
                   node={selectedNode}
                   links={selectedLinks}

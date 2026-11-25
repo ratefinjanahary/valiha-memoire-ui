@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -37,7 +39,8 @@ function Wrapper({ children, title, description }: { children: React.ReactNode; 
 }
 
 export function ResetPasswordForm({ token }: { token: string | null }) {
-  const [success, setSuccess] = useState(false);
+  const router = useRouter();
+  const [done, setDone] = useState(false); // reste true jusqu'à la fin de la navigation
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -47,14 +50,17 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
     formState: { errors, isSubmitting },
   } = useForm<ResetPasswordFormData>({ resolver: zodResolver(resetPasswordSchema) });
 
+  const busy = isSubmitting || done;
+
   const onSubmit = async ({ newPassword }: ResetPasswordFormData) => {
-    if (!token) return;
+    if (!token || busy) return;
     setErrorMsg(null);
     try {
       await authService.resetPassword({ token, newPassword });
-      setSuccess(true);
+      setDone(true);
+      toast.success("Mot de passe modifié");
+      router.replace("/login");
     } catch (error) {
-      // 400 "Lien invalide ou expiré" : on propose d'en redemander un
       setErrorMsg(getApiErrorMessage(error, "Lien invalide ou expiré"));
     }
   };
@@ -70,25 +76,6 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
           className="w-full"
           render={
             <Link href="/forgot-password">Demander un nouveau lien</Link>
-          }
-        />
-      </Wrapper>
-    );
-  }
-
-  // État : succès
-  if (success) {
-    return (
-      <Wrapper title="Mot de passe modifié">
-        <Alert className="mb-4">
-          <AlertDescription>
-            Votre mot de passe a été réinitialisé. Vos autres sessions ont été déconnectées.
-          </AlertDescription>
-        </Alert>
-        <Button 
-          className="w-full"
-          render={
-            <Link href="/login">Se connecter</Link>
           }
         />
       </Wrapper>
@@ -149,11 +136,11 @@ export function ResetPasswordForm({ token }: { token: string | null }) {
           )}
         </div>
 
-        <Button size="lg" type="submit" disabled={isSubmitting} className="w-full mt-4">
-          {isSubmitting ? (
+        <Button size="lg" type="submit" disabled={busy} className="w-full mt-4">
+          {busy ? (
             <>
               <Spinner className="w-4 h-4 mr-2" />
-              Enregistrement...
+              {done ? "Redirection..." : "Enregistrement..."}
             </>
           ) : (
             "Réinitialiser le mot de passe"

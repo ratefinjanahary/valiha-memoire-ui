@@ -10,6 +10,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import type { UpdateMemoirePayload } from "@/types/memoire";
+
 export type SubmissionStatus = "running" | "done" | "error";
 
 export type SubmissionStepId = "upload" | "summary" | "keywords" | "save" | "index";
@@ -24,6 +26,62 @@ export interface SubmissionStep {
   estimatedMs: number;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Définitions d'étapes partagées entre la soumission et la modification       */
+/* -------------------------------------------------------------------------- */
+
+const UPLOAD_STEP: SubmissionStep = {
+  id: "upload",
+  label: "Envoi du document",
+  hint: "Transfert de votre PDF…",
+  icon: ArrowUpFromLine,
+  estimatedMs: 1500,
+};
+
+const SUMMARY_STEP: SubmissionStep = {
+  id: "summary",
+  label: "Lecture du PDF et rédaction du résumé",
+  hint: "L'IA lit votre document pour en rédiger le résumé…",
+  icon: ScanText,
+  estimatedMs: 9000,
+};
+
+const KEYWORDS_ALIGN_STEP: SubmissionStep = {
+  id: "keywords",
+  label: "Alignement des mots-clés sur le thésaurus",
+  hint: "Recherche des descripteurs officiels du domaine…",
+  icon: Tags,
+  estimatedMs: 4000,
+};
+
+const KEYWORDS_GENERATE_STEP: SubmissionStep = {
+  id: "keywords",
+  label: "Génération des mots-clés",
+  hint: "L'IA propose des mots-clés, puis les relie au thésaurus…",
+  icon: Tags,
+  estimatedMs: 6000,
+};
+
+const SAVE_STEP: SubmissionStep = {
+  id: "save",
+  label: "Enregistrement du mémoire",
+  hint: "Enregistrement dans la base…",
+  icon: DatabaseZap,
+  estimatedMs: 1500,
+};
+
+const INDEX_STEP: SubmissionStep = {
+  id: "index",
+  label: "Indexation pour la recherche sémantique",
+  hint: "Calcul de l'empreinte sémantique du mémoire…",
+  icon: WandSparkles,
+  estimatedMs: 3000,
+};
+
+/* -------------------------------------------------------------------------- */
+/* Soumission                                                                  */
+/* -------------------------------------------------------------------------- */
+
 interface BuildStepsInput {
   hasFile: boolean;
   hasResume: boolean;
@@ -34,63 +92,58 @@ interface BuildStepsInput {
 export function buildSubmissionSteps({ hasFile, hasResume, hasKeywords }: BuildStepsInput): SubmissionStep[] {
   const steps: SubmissionStep[] = [];
 
-  if (hasFile) {
-    steps.push({
-      id: "upload",
-      label: "Envoi du document",
-      hint: "Transfert de votre PDF…",
-      icon: ArrowUpFromLine,
-      estimatedMs: 1500,
-    });
-  }
+  if (hasFile) steps.push(UPLOAD_STEP);
+  if (hasFile && !hasResume) steps.push(SUMMARY_STEP);
 
-  if (hasFile && !hasResume) {
-    steps.push({
-      id: "summary",
-      label: "Lecture du PDF et rédaction du résumé",
-      hint: "L'IA lit votre document pour en rédiger le résumé…",
-      icon: ScanText,
-      estimatedMs: 9000,
-    });
-  }
-
-  steps.push(
-    hasKeywords
-      ? {
-          id: "keywords",
-          label: "Alignement des mots-clés sur le thésaurus",
-          hint: "Recherche des descripteurs officiels du domaine…",
-          icon: Tags,
-          estimatedMs: 4000,
-        }
-      : {
-          id: "keywords",
-          label: "Génération des mots-clés",
-          hint: "L'IA propose des mots-clés, puis les relie au thésaurus…",
-          icon: Tags,
-          estimatedMs: 6000,
-        },
-  );
-
-  steps.push(
-    {
-      id: "save",
-      label: "Enregistrement du mémoire",
-      hint: "Enregistrement dans la base…",
-      icon: DatabaseZap,
-      estimatedMs: 1500,
-    },
-    {
-      id: "index",
-      label: "Indexation pour la recherche sémantique",
-      hint: "Calcul de l'empreinte sémantique du mémoire…",
-      icon: WandSparkles,
-      estimatedMs: 3000,
-    },
-  );
+  steps.push(hasKeywords ? KEYWORDS_ALIGN_STEP : KEYWORDS_GENERATE_STEP);
+  steps.push(SAVE_STEP, INDEX_STEP);
 
   return steps;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Modification                                                                */
+/* -------------------------------------------------------------------------- */
+
+const EDIT_SAVE_STEP: SubmissionStep = {
+  ...SAVE_STEP,
+  label: "Enregistrement des modifications",
+  hint: "Mise à jour du mémoire dans la base…",
+};
+
+const EDIT_INDEX_STEP: SubmissionStep = {
+  ...INDEX_STEP,
+  label: "Réindexation pour la recherche sémantique",
+  hint: "Recalcul de l'empreinte sémantique du mémoire…",
+};
+
+/**
+ * Étapes déclenchées côté serveur par une modification, déduites des champs réellement envoyés.
+ * - mots-clés envoyés vides → régénérés par l'IA ; envoyés non vides → alignés sur le thésaurus
+ *   (changer le domaine seul ne recalcule pas les mots-clés)
+ * - titre / résumé / mots-clés modifiés → l'empreinte sémantique est recalculée
+ *
+ * ⚠️ À ajuster si le backend réindexe dans d'autres cas.
+ */
+export function buildEditSteps(payload: UpdateMemoirePayload): SubmissionStep[] {
+  const steps: SubmissionStep[] = [];
+
+  if (payload.motsCles !== undefined) {
+    steps.push(payload.motsCles.length === 0 ? KEYWORDS_GENERATE_STEP : KEYWORDS_ALIGN_STEP);
+  }
+
+  steps.push(EDIT_SAVE_STEP);
+
+  const needsReindex =
+    payload.titre !== undefined || payload.resume !== undefined || payload.motsCles !== undefined;
+  if (needsReindex) steps.push(EDIT_INDEX_STEP);
+
+  return steps;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Hook                                                                        */
+/* -------------------------------------------------------------------------- */
 
 const FAST_FORWARD_MS = 350;
 
@@ -101,7 +154,8 @@ const FAST_FORWARD_MS = 350;
  * - "error"   : se fige sur l'étape en cours.
  *
  * `steps` doit être stable (état React ou useMemo), sinon les timers sont relancés à chaque rendu.
- * L'état repart de zéro quand le composant qui utilise ce hook est démonté puis remonté.
+ * L'état repart de zéro quand le composant qui utilise ce hook est démonté puis remonté
+ * (ex. changer sa `key` pour relancer une tentative).
  */
 export function useSubmissionSteps(steps: SubmissionStep[], status: SubmissionStatus) {
   const [activeIndex, setActiveIndex] = useState(0);

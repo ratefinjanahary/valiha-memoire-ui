@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
-  Check, Loader2, AlertTriangle,
+  Check, AlertTriangle,
   Calendar, GraduationCap, Building2, BookOpen, ExternalLink, Pencil, Trash2,
-  Eye, Clock, CheckCircle2, XCircle, PencilLine, MoreVertical
+  Info, Clock, CheckCircle2, XCircle, FileXCorner, PencilLine, MoreVertical
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { memoireService } from "@/services/memoire.service";
 import { Memoire, StatutMemoire } from "@/types/memoire";
 import { EditMemoireDialog, getApiErrorMessage } from "@/components/memoires/edit-memoire-dialog";
+import { MemoireDetailModal } from "@/components/memoires/memoire-detail-modal";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -76,7 +77,7 @@ export default function ModerationPage() {
 
   /* State et badge de la vue détails */
   const [memoireToView, setMemoireToView] = useState<Memoire | null>(null);
-
+  const closeDetails = useCallback(() => setMemoireToView(null), []);
   const [memoireToDelete, setMemoireToDelete] = useState<Memoire | null>(null);
 
 
@@ -183,8 +184,6 @@ export default function ModerationPage() {
       setSubmittingId(null);
     }
   };
-
-  const viewBadge = memoireToView ? STATUT_BADGE[memoireToView.statut] : null;
 
   const capitalize = (str?: string) => {
     if (!str) return "";
@@ -301,21 +300,7 @@ export default function ModerationPage() {
                     </div>
 
                     {/* Actions de modération */}
-                    <div className="w-full pt flex items-center justify-between gap-2">
-                      {memoire.pdfUrl ? (
-                        <a
-                          href={memoire.pdfUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center min-w-0 text-xs font-semibold text-primary hover:underline"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5 mr-1 shrink-0" />
-                          <span className="truncate">Voir le document PDF</span>
-                        </a>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Aucun fichier PDF rattaché</span>
-                      )}
-
+                    <div className="w-full pt flex items-center justify-end gap-2">
                       <div className="flex items-center gap-1 shrink-0">
                         {(canModerate || canRevalidate) && (
                           <Button
@@ -345,11 +330,11 @@ export default function ModerationPage() {
                           />
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => setMemoireToView(memoire)}>
-                              <Eye className="w-4 h-4 mr-2" /> Détails
+                              <Info className="w-4 h-4 mr-2" /> Détails
                             </DropdownMenuItem>
 
                             <DropdownMenuItem onClick={() => openRejectDialog(memoire.id)}>
-                              <XCircle className="w-4 h-4 mr-2" /> Rejeter
+                              <FileXCorner className="w-4 h-4 mr-2" /> Rejeter
                             </DropdownMenuItem>
 
                             <DropdownMenuItem onClick={() => openEditDialog(memoire)}>
@@ -465,40 +450,11 @@ export default function ModerationPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={memoireToView !== null} onOpenChange={(o) => !o && setMemoireToView(null)}>
-        <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-y-auto">
-          {memoireToView && viewBadge && (
-            <>
-              <DialogHeader className="space-y-2">
-                <Badge variant="outline" className="font-semibold gap-1 w-fit">
-                  <viewBadge.Icon className="w-3.5 h-3.5" />
-                  {viewBadge.label}
-                </Badge>
-                <DialogTitle className="leading-snug">{memoireToView.titre}</DialogTitle>
-                <DialogDescription>
-                  {memoireToView.auteurPrenom} {memoireToView.auteurNom}
-                </DialogDescription>
-              </DialogHeader>
-
-              {memoireToView.statut === "REJETTE" && memoireToView.motifRejet && (
-                <div className="bg-destructive/5 border border-destructive/5 p-3 rounded-md text-sm text-destructive">
-                  <p className="mb-0.5 flex items-center">
-                    <XCircle className="w-4 h-4 mr-1.5" /> Motif du rejet :
-                  </p>
-                  {memoireToView.motifRejet}
-                </div>
-              )}
-
-              <div className="bg-muted/50 p-3 rounded-md text-sm text-muted-foreground text-justify border border-muted">
-                <p className="font-semibold text-foreground/80 mb-1 flex items-center">
-                  Résumé :
-                </p>
-                {memoireToView.resume || "Aucun résumé fourni."}
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <MemoireDetailModal
+        memoireId={memoireToView?.id ?? null}
+        isOpen={memoireToView !== null}
+        onClose={closeDetails}
+      />
     </div>
   );
 }

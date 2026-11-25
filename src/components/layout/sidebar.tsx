@@ -12,6 +12,7 @@ import {
   Menu,
   LibraryBig, 
   Users, 
+  Notebook,
   type LucideIcon
 } from "lucide-react";
 import { useUiStore } from "@/stores/uiStore";
@@ -30,6 +31,7 @@ interface NavLink {
 const navLinks: NavLink[] = [
   { name: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
   { name: "Utilisateurs", href: "/users", icon: Users, roles: ["ADMIN"] },
+  { name: "Journal d'audit", href: "/audit", icon: Notebook, roles: ["ADMIN"] },
   { name: "Modération", href: "/moderation", icon: LibraryBig, roles: ["ADMIN", "DOCUMENTALISTE"] },
   { name: "Mémoires", href: "/memoires", icon: BookOpen },
   { name: "Recherche", href: "/search", icon: Search },

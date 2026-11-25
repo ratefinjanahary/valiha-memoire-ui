@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuthStore } from "@/stores/authStore";
 import { authService } from "@/services/auth.service";
+import { getErrorMessage } from "@/lib/errors";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -56,7 +57,7 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
+  const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
 
@@ -77,31 +78,11 @@ export default function LoginPage() {
       setAuth(response.user, token);
       router.push("/dashboard");
     } catch (error: any) {
-      let errorMessage = "Identifiants invalides ou erreur réseau";
-
-      if (error.response?.data) {
-        const errorData = error.response.data;
-
-        if (Array.isArray(errorData)) {
-          errorMessage = errorData.map((err) => err.msg || JSON.stringify(err)).join(", ");
-        } else if (typeof errorData === "string") {
-          errorMessage = errorData;
-        } else if (errorData.detail) {
-          if (typeof errorData.detail === "string") {
-            errorMessage = errorData.detail;
-          } else if (Array.isArray(errorData.detail)) {
-            errorMessage = errorData.detail
-              .map((err: { msg: any }) => err.msg || JSON.stringify(err))
-              .join(", ");
-          }
-        } else if (typeof errorData === "object") {
-          errorMessage = JSON.stringify(errorData);
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
+      if (error.response?.status === 401) {
+        setError("email", { type: "server", message: "" });
+        setError("password", { type: "server", message: "" });
       }
-
-      setErrorMsg(errorMessage);
+      setErrorMsg(getErrorMessage(error));
     }
   };
 

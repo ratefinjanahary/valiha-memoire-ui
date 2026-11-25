@@ -16,7 +16,7 @@ import {
   Network,
   ShieldCheck,
   BuildingComplex,
-  UserRoundCheck,
+  UserCheck,
   Gift,
   MessageSquare,
 } from "lucide-react";
@@ -90,7 +90,7 @@ const guarantees = [
     desc: "Valiha est développé pour le CIDST Tsimbazaza, centre de référence de l’information scientifique et technique à Madagascar.",
   },
   {
-    icon: UserRoundCheck,
+    icon: UserCheck,
     title: "Chaque mémoire est validé par un humain",
     desc: "Rien n’est publié sans modération. Vous cherchez dans des contenus relus, pas dans un fourre-tout.",
   },
@@ -259,7 +259,7 @@ export default function LandingPage() {
               <div>
                 <motion.h1
                   variants={item}
-                  className="text-2xl font-bold leading-[1.1] tracking-tight text-balance sm:text-4xl"
+                  className="text-4xl font-bold leading-[1.1] tracking-tight text-balance"
                 >
                   Toute la recherche malgache, enfin au même endroit.
                 </motion.h1>

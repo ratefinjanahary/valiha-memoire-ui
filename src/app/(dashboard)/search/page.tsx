@@ -10,7 +10,7 @@ import { Memoire } from "@/types/memoire";
 import { MemoireCard } from "@/components/memoires/memoire-card";
 import { MemoireDetailModal } from "@/components/memoires/memoire-detail-modal";
 
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SemanticLoader } from "@/components/memoires/semantic-loader";
@@ -27,8 +27,14 @@ export default function SemanticSearchPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Memoire[]>([]);
 
+  // Requête API en cours
   const [isSearching, setIsSearching] = useState(false);
+  // Animation du loader en cours (doit toujours aller jusqu'au bout)
+  const [isAnimating, setIsAnimating] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Les résultats ne s'affichent que lorsque l'API ET l'animation sont terminées
+  const isLoading = isSearching || isAnimating;
 
   const [selectedMemoireId, setSelectedMemoireId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -52,15 +58,20 @@ export default function SemanticSearchPage() {
 
   const handleSemanticSearch = async (e?: React.SubmitEvent<HTMLFormElement>) => {
     e?.preventDefault();
-    if (!query.trim() || isSearching) return;
+    if (!query.trim() || isLoading) return;
 
     setIsSearching(true);
+    setIsAnimating(true);
     setHasSearched(true);
     try {
       const data = await searchService.searchSemantic(query);
       setResults(data);
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Erreur lors de la recherche semantique");
+      // En cas d'erreur, inutile de faire attendre l'utilisateur : on coupe le loader
+      setResults([]);
+      setHasSearched(false);
+      setIsAnimating(false);
     } finally {
       setIsSearching(false);
     }
@@ -100,33 +111,27 @@ export default function SemanticSearchPage() {
           <motion.form
             variants={v.fadeUp}
             onSubmit={handleSemanticSearch}
-            className="max-w-2xl mx-auto mt-8 rounded-xl border bg-card px-4 py-3 text-left transition-shadow focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/50"
+            className="relative max-w-2xl mx-auto mt-8"
           >
-            <Textarea
-              rows={1}
+            <Input
+              type="text"
+              enterKeyHint="search"
               placeholder="Ex: Intelligence Artificielle..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                  e.preventDefault();
-                  handleSemanticSearch();
-                }
-              }}
-              className="min-h-10 max-h-40 resize-none border-0 dark:bg-transparent px-1 py-2 shadow-none focus-visible:ring-0"
+              className="h-10 rounded-lg bg-card pl-5 pr-14 text-base shadow-none"
             />
 
-            <div className="mt-2 flex items-center justify-end">
-              <Button
-                type="submit"
-                size="icon"
-                className="h-10 w-10 rounded-full"
-                disabled={isSearching || !query.trim()}
-                aria-label="Rechercher"
-              >
-                {isSearching ? <Spinner className="h-4 w-4" /> : <Search className="h-4 w-4" />}
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              size="icon"
+              variant="ghost"
+              className="absolute right-1.5 top-1/2 h-9 w-9 -translate-y-1/2"
+              disabled={isLoading || !query.trim()}
+              aria-label="Rechercher"
+            >
+              {isLoading ? <Spinner className="h-4 w-4" /> : <Search className="h-5 w-5" />}
+            </Button>
           </motion.form>
         </motion.div>
       </motion.div>
@@ -203,7 +208,7 @@ export default function SemanticSearchPage() {
               </motion.div>
               <p>Formulez une question complexe pour voir la magie operer.</p>
             </motion.div>
-          ) : isSearching ? (
+          ) : isLoading ? (
             <motion.div
               key="loading"
               initial={{ opacity: 0 }}
@@ -212,7 +217,10 @@ export default function SemanticSearchPage() {
               transition={{ duration: 0.3 }}
               className="space-y-8"
             >
-              <SemanticLoader />
+              <SemanticLoader
+                isDataReady={!isSearching}
+                onComplete={() => setIsAnimating(false)}
+              />
             </motion.div>
           ) : results.length === 0 ? (
             <motion.div

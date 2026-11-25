@@ -5,6 +5,13 @@ export interface Universite {
   ville?: string;
 }
 
+/** Forme minimale d'une université sélectionnée (ComboBox, formulaire de soumission) */
+export interface UniversiteOption {
+  id: string;
+  nom: string;
+  sigle?: string | null;
+}
+
 export interface Domaine {
   id: string;
   nom: string;

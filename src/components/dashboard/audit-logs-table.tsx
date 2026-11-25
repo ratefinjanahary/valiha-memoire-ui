@@ -1,12 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  AnimatePresence,
-  motion,
-  useReducedMotion,
-  type Variants,
-} from "framer-motion";
+import { useRouter } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { isAxiosError } from "axios";
 import { ChevronLeft, ChevronRight, ScrollText, Trash2 } from "lucide-react";
 
@@ -69,6 +65,7 @@ function formatDate(iso: string) {
 }
 
 export function AuditLogsTable() {
+  const router = useRouter();
   const reduceMotion = useReducedMotion();
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -77,6 +74,7 @@ export function AuditLogsTable() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [spinnerElapsed, setSpinnerElapsed] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +100,8 @@ export function AuditLogsTable() {
       setError(null);
     } catch (err) {
       if (isAxiosError(err) && err.response?.status === 403) {
-        setForbidden(true); // pas ADMIN : la section disparaît
+        setForbidden(true); // pas ADMIN (rôle révoqué côté serveur) : retour au dashboard
+        router.replace("/dashboard");
       } else {
         console.error("Erreur chargement audit logs", err);
         setError("Impossible de charger le journal d'audit.");
@@ -111,9 +110,15 @@ export function AuditLogsTable() {
       setIsFetching(false);
       setIsInitialLoad(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => { void load(page); }, [page, load]);
+
+  // Le Spinner reste affiché SPINNER_DURATION_MS, même si l'API répond plus vite
+  useEffect(() => {
+    const timer = setTimeout(() => setSpinnerElapsed(true), 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   /* Sélection */
   const allSelected = logs.length > 0 && logs.every((l) => selected.has(l.id));
@@ -194,28 +199,13 @@ export function AuditLogsTable() {
     }
   }
 
-  /* Animation */
-  const rowVariants: Variants = {
-    hidden: { opacity: 0, y: reduceMotion ? 0 : 14 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: {
-        delay: reduceMotion ? 0 : i * 0.05,
-        duration: reduceMotion ? 0 : 0.4,
-        ease: [0.22, 1, 0.36, 1],
-      },
-    }),
-    exit: {
-      opacity: 0,
-      x: reduceMotion ? 0 : -24,
-      transition: { duration: 0.2 },
-    },
-  };
-
   /* Rendu */
 
   if (forbidden) return null;
+
+  // Spinner : au moins 500 ms ; prolongé seulement si l'API n'a pas encore répondu
+  // (évite d'afficher à tort l'état « Aucune action enregistrée »)
+  const showSpinner = isInitialLoad || !spinnerElapsed;
 
   const pendingCount = pending?.length ?? 0;
 
@@ -262,7 +252,7 @@ export function AuditLogsTable() {
           </p>
         )}
 
-        {isInitialLoad ? (
+        {showSpinner ? (
           <div className="flex h-48 items-center justify-center">
             <Spinner className="h-5 w-5 text-primary" />
           </div>
@@ -302,19 +292,19 @@ export function AuditLogsTable() {
 
                 <TableBody>
                   <AnimatePresence initial={false}>
-                    {logs.map((log, index) => {
+                    {logs.map((log) => {
                       const isSelected = selected.has(log.id);
                       return (
                         // motion.tr (et non motion(TableRow)) : indépendant de la
                         // version de framer-motion ; mêmes classes que TableRow.
+                        // Pas d'animation d'entrée : seule la sortie (suppression) est animée.
                         <motion.tr
                           key={log.id}
-                          custom={index}
-                          variants={rowVariants}
-                          initial="hidden"
-                          whileInView="visible"
-                          viewport={{ once: true, amount: 0.3 }}
-                          exit="exit"
+                          exit={{
+                            opacity: 0,
+                            x: reduceMotion ? 0 : -24,
+                            transition: { duration: 0.2 },
+                          }}
                           data-state={isSelected ? "selected" : undefined}
                           className="transition-colors last:border-b-0 hover:bg-muted/50 data-[state=selected]:bg-muted"
                         >

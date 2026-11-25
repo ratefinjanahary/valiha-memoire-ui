@@ -7,8 +7,9 @@ import * as z from "zod";
 import { ArrowUpFromLine } from "lucide-react";
 
 import { memoireService } from "@/services/memoire.service";
-import { Universite, Domaine } from "@/types/memoire";
+import { Domaine } from "@/types/memoire";
 import { EncadreurCombobox } from "@/components/encadreurs/encadreur-combobox";
+import { UniversiteCombobox } from "@/components/universites/universite-combobox";
 import { KeywordsInput } from "@/components/memoires/keywords-input";
 import { SubmitProcessingView } from "@/components/memoires/submit-processing-view";
 import {
@@ -54,6 +55,12 @@ const encadreurOptionSchema = z.object({
   titre: z.string().nullish(),
 });
 
+const universiteOptionSchema = z.object({
+  id: z.string().uuid(),
+  nom: z.string(),
+  sigle: z.string().nullish(),
+});
+
 const formSchema = z.object({
   titre: z.string().min(5, "Le titre est requis"),
   resume: z.string(),
@@ -62,7 +69,9 @@ const formSchema = z.object({
   auteurNom: z.string().min(2, "Nom requis"),
   auteurPrenom: z.string().min(2, "Prénom requis"),
   auteurEmail: z.string().email("Email invalide"),
-  universiteId: z.string().uuid("Université requise"),
+  // `: boolean` explicite : sans lui, TS 5.5+ déduit un type guard, Zod 4 réduit alors le type de
+  // sortie à « non null » et il diverge du type d'entrée utilisé par useForm
+  universite: universiteOptionSchema.nullable().refine((u): boolean => u !== null, "Université requise"),
   domaineId: z.string().uuid("Domaine requis"),
   encadreurs: z
     .array(encadreurOptionSchema)
@@ -99,20 +108,7 @@ const TYPE_DIPLOME_LABELS = {
   DOCTORAT: "Doctorat",
 } as const;
 
-// Sigle + nom complet, ou nom seul si pas de sigle
-const UniversiteLabel = ({ u }: { u: Universite }) => {
-  return u.sigle ? (
-    <span className="truncate">
-      <span className="font-medium">{u.sigle}</span>
-      <span className="text-muted-foreground"> — {u.nom}</span>
-    </span>
-  ) : (
-    <span className="truncate">{u.nom}</span>
-  );
-}
-
 export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoireModalProps) {
-  const [universites, setUniversites] = useState<Universite[]>([]);
   const [domaines, setDomaines] = useState<Domaine[]>([]);
   // "form" : formulaire visible | "processing" : écran de traitement (running / done / error)
   const [phase, setPhase] = useState<"form" | "processing">("form");
@@ -130,7 +126,7 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
       auteurNom: "",
       auteurPrenom: "",
       auteurEmail: "",
-      universiteId: "",
+      universite: null,
       domaineId: "",
       encadreurs: [],
       auteurEncadreur: null,
@@ -150,7 +146,6 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
       setPhase("form");
       setProcessStatus("running");
       setErrorMessage(null);
-      memoireService.getUniversites().then(setUniversites).catch(console.error);
       memoireService.getDomaines().then(setDomaines).catch(console.error);
     } else {
       form.reset();
@@ -181,7 +176,8 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
       formData.append("auteurNom", values.auteurNom);
       formData.append("auteurPrenom", values.auteurPrenom);
       formData.append("auteurEmail", values.auteurEmail);
-      formData.append("universiteId", values.universiteId);
+      // non null : garanti par la validation du schéma
+      formData.append("universiteId", values.universite!.id);
       formData.append("domaineId", values.domaineId);
       // Clé répétée, comme encadreurIds (parsée en tableau côté API)
       values.encadreurs.forEach((e) => formData.append("encadreurIds", e.id));
@@ -311,37 +307,25 @@ export function SubmitMemoireModal({ isOpen, onClose, onSuccess }: SubmitMemoire
             )} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Controller control={form.control} name="universiteId" render={({ field, fieldState }) => {
-                const selected = universites.find((u) => u.id === field.value);
-                return (
-                  <Field>
-                    <FieldLabel>Université</FieldLabel>
-                    <FieldContent>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Sélectionnez...">
-                            {selected && <UniversiteLabel u={selected} />}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {universites.map((u) => (
-                            <SelectItem key={u.id} value={u.id}>
-                              <UniversiteLabel u={u} />
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FieldContent>
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                );
-              }} />
+              <Controller control={form.control} name="universite" render={({ field, fieldState }) => (
+                <Field className="min-w-0">
+                  <FieldLabel>Université</FieldLabel>
+                  <FieldContent>
+                    <UniversiteCombobox
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                    />
+                  </FieldContent>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )} />
               <Controller control={form.control} name="domaineId" render={({ field, fieldState }) => (
-                <Field>
+                <Field className="min-w-0">
                   <FieldLabel>Domaine</FieldLabel>
                   <FieldContent>
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Sélectionnez...">
                           {domaines.find((d) => d.id === field.value)?.nom}
                         </SelectValue>

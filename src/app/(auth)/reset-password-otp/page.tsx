@@ -1,19 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { Eye, EyeOff } from "lucide-react";
 import { authService } from "@/services/auth.service";
 import { getApiErrorMessage } from "@/lib/api-error";
 import {
   forgotPasswordSchema,
-  resetPasswordOtpSchema,
+  verifyOtpSchema,
   type ForgotPasswordFormData,
-  type ResetPasswordOtpFormData,
+  type VerifyOtpFormData,
 } from "@/lib/validators/password-reset";
+import { CircleCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,8 +22,9 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 
-type Step = "request" | "verify" | "done";
+type Step = "request" | "verify";
 const RESEND_DELAY_S = 60; // aligné sur le cooldown backend
+const SUCCESS_DISPLAY_MS = 3000; // durée d'affichage de l'état « code vérifié »
 
 // Défini hors du composant : sinon il serait recréé à chaque rendu et démonterait les formulaires
 function Shell({
@@ -52,15 +54,18 @@ function Shell({
 }
 
 export default function ResetPasswordOtpPage() {
+  const router = useRouter();
   const [step, setStep] = useState<Step>("request");
   const [email, setEmail] = useState("");
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  // Reste à true entre la vérification réussie et la fin de la navigation :
+  // évite un double clic qui rejouerait un code déjà consommé.
+  const [redirecting, setRedirecting] = useState(false);
 
   const emailForm = useForm<ForgotPasswordFormData>({ resolver: zodResolver(forgotPasswordSchema) });
-  const otpForm = useForm<ResetPasswordOtpFormData>({ resolver: zodResolver(resetPasswordOtpSchema) });
+  const otpForm = useForm<VerifyOtpFormData>({ resolver: zodResolver(verifyOtpSchema) });
 
   // Compte à rebours avant de pouvoir redemander un code
   useEffect(() => {
@@ -88,39 +93,28 @@ export default function ResetPasswordOtpPage() {
   const onRequest = async ({ email: value }: ForgotPasswordFormData) => {
     if (await requestCode(value)) {
       setEmail(value);
+      otpForm.reset({ code: "" });
       setStep("verify");
     }
   };
 
-  const onVerify = async ({ code, newPassword }: ResetPasswordOtpFormData) => {
+  // Le serveur ne change PAS le mot de passe ici : il vérifie le code, le consomme, et renvoie
+  // un jeton à usage unique que la page /reset-password échange contre le nouveau mot de passe.
+  const onVerify = async ({ code }: VerifyOtpFormData) => {
     setErrorMsg(null);
     try {
-      await authService.resetPasswordOtp({ email, code, newPassword });
-      setStep("done");
+      const { resetToken } = await authService.verifyOtp({ email, code });
+      const target = `/reset-password?token=${encodeURIComponent(resetToken)}`;
+      setRedirecting(true); // → input vert + bouton verrouillé
+      router.prefetch(target); // la page suivante se charge pendant l'affichage du succès
+      await new Promise((r) => setTimeout(r, SUCCESS_DISPLAY_MS));
+      router.replace(target);
     } catch (error) {
       setErrorMsg(getApiErrorMessage(error, "Code invalide ou expiré"));
       otpForm.resetField("code");
+      otpForm.setFocus("code");
     }
   };
-
-  // ─── Étape 3 : succès ───
-  if (step === "done") {
-    return (
-      <Shell title="Mot de passe modifié">
-        <Alert className="mb-4">
-          <AlertDescription>
-            Votre mot de passe a été réinitialisé. Vos autres sessions ont été déconnectées.
-          </AlertDescription>
-        </Alert>
-        <Button 
-          className="w-full"
-          render={
-            <Link href="/login">Se connecter</Link>
-          }
-        />
-      </Shell>
-    );
-  }
 
   // ─── Étape 1 : saisie de l'e-mail ───
   if (step === "request") {
@@ -177,9 +171,10 @@ export default function ResetPasswordOtpPage() {
     );
   }
 
-  // ─── Étape 2 : code + nouveau mot de passe ───
+  // ─── Étape 2 : saisie du code uniquement (le nouveau mot de passe se saisit sur /reset-password) ───
   const { register, handleSubmit, formState } = otpForm;
   const { errors, isSubmitting } = formState;
+  const busy = isSubmitting || redirecting;
 
   return (
     <Shell title="Saisissez le code" description={`Code envoyé à ${email} (valable 10 minutes).`}>
@@ -197,67 +192,58 @@ export default function ResetPasswordOtpPage() {
       <form onSubmit={handleSubmit(onVerify)} className="space-y-5">
         <div className="space-y-2">
           <Label htmlFor="code">Code à 6 chiffres</Label>
-          <Input
-            id="code"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            placeholder="123456"
-            {...register("code")}
-            className={`text-center text-lg tracking-[0.4em] font-semibold ${
-              errors.code ? "border-red-500 focus-visible:ring-red-200" : ""
-            }`}
-          />
+          <div className="relative">
+            <Input
+              id="code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              maxLength={6}
+              placeholder="123456"
+              readOnly={busy}
+              {...register("code", {
+                onChange: (e) => {
+                  if (!busy && /^\d{6}$/.test(e.target.value)) {
+                    void otpForm.handleSubmit(onVerify)();
+                  }
+                },
+              })}
+              className={`text-center text-lg tracking-[0.4em] font-semibold transition-colors ${
+                redirecting
+                  ? "text-green-600 focus-visible:border-green-500 focus-visible:ring-green-200"
+                  : errors.code
+                    ? "border-red-500 focus-visible:ring-red-200"
+                    : ""
+              }`}
+            />
+            {redirecting && (
+              <motion.span
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500"
+                aria-hidden
+              >
+                <CircleCheck className="h-5 w-5" />
+              </motion.span>
+            )}
+          </div>
           {errors.code && <p className="text-red-500 text-xs font-medium">{errors.code.message}</p>}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="newPassword">Nouveau mot de passe</Label>
-          <div className="relative">
-            <Input
-              id="newPassword"
-              type={showPassword ? "text" : "password"}
-              autoComplete="new-password"
-              {...register("newPassword")}
-              className={errors.newPassword ? "border-red-500 focus-visible:ring-red-200 pr-10" : "pr-10"}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((p) => !p)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-              tabIndex={-1}
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
-          {errors.newPassword && (
-            <p className="text-red-500 text-xs font-medium">{errors.newPassword.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
-          <Input
-            id="confirmPassword"
-            type={showPassword ? "text" : "password"}
-            autoComplete="new-password"
-            {...register("confirmPassword")}
-            className={errors.confirmPassword ? "border-red-500 focus-visible:ring-red-200" : ""}
-          />
-          {errors.confirmPassword && (
-            <p className="text-red-500 text-xs font-medium">{errors.confirmPassword.message}</p>
-          )}
-        </div>
-
-        <Button size="lg" type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? (
+        <Button size="lg" type="submit" disabled={busy} className="w-full">
+          {redirecting ? (
+            <>
+              <CircleCheck className="w-4 h-4 mr-2" />
+              Code vérifié
+            </>
+          ) : isSubmitting ? (
             <>
               <Spinner className="w-4 h-4 mr-2" />
               Vérification...
             </>
           ) : (
-            "Réinitialiser le mot de passe"
+            "Vérifier le code"
           )}
         </Button>
       </form>
@@ -265,7 +251,7 @@ export default function ResetPasswordOtpPage() {
       <div className="mt-6 flex items-center justify-between text-sm">
         <button
           type="button"
-          disabled={cooldown > 0}
+          disabled={cooldown > 0 || busy}
           onClick={() => requestCode(email)}
           className="text-primary hover:underline disabled:no-underline disabled:cursor-not-allowed"
         >
@@ -273,6 +259,7 @@ export default function ResetPasswordOtpPage() {
         </button>
         <button
           type="button"
+          disabled={busy}
           onClick={() => {
             setErrorMsg(null);
             setInfoMsg(null);

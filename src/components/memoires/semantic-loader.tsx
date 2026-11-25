@@ -1,5 +1,7 @@
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useState } from "react";
+import { AnimatePresence, animate, motion, useReducedMotion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
+
+import { Progress } from "@/components/ui/progress";
 
 const SEARCH_STEPS = [
   "Analyse de votre requête…",
@@ -11,22 +13,61 @@ const SEARCH_STEPS = [
 
 const SKELETON_COUNT = 3;
 
-export const SemanticLoader = () => {
-  const [step, setStep] = useState(0);
+// Durée (en secondes) d'une étape
+const STEP_DURATION = 1.6;
+// Durée (en secondes) de la phase finale (palier → 100 %)
+const FINISH_DURATION = 0.6;
+
+const STEP_SIZE = 100 / SEARCH_STEPS.length;
+// La dernière étape commence à ce palier : on y attend la réponse de l'API si besoin
+const HOLD_VALUE = 100 - STEP_SIZE;
+
+interface SemanticLoaderProps {
+  /** true quand la réponse de l'API est arrivée */
+  isDataReady: boolean;
+  /** Appelé une fois l'animation terminée (barre à 100 %) */
+  onComplete: () => void;
+}
+
+export const SemanticLoader = ({ isDataReady, onComplete }: SemanticLoaderProps) => {
+  const [progress, setProgress] = useState(0);
+  const [hasReachedHold, setHasReachedHold] = useState(false);
   const reduceMotion = useReducedMotion();
 
+  // Évite de relancer les animations si le parent recrée le callback
+  const onCompleteRef = useRef(onComplete);
   useEffect(() => {
-    const id = setInterval(
-      () => setStep((s) => Math.min(s + 1, SEARCH_STEPS.length - 1)),
-      1600
-    );
-    return () => clearInterval(id);
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  // Phase 1 : 0 → palier, en parcourant toutes les étapes sauf la dernière
+  useEffect(() => {
+    const controls = animate(0, HOLD_VALUE, {
+      duration: STEP_DURATION * (SEARCH_STEPS.length - 1),
+      ease: "linear",
+      onUpdate: setProgress,
+      onComplete: () => setHasReachedHold(true),
+    });
+    return () => controls.stop();
   }, []);
 
-  const progress = ((step + 1) / SEARCH_STEPS.length) * 100;
+  // Phase 2 : palier → 100 %, uniquement quand la phase 1 est finie ET que les données sont là
+  useEffect(() => {
+    if (!hasReachedHold || !isDataReady) return;
+
+    const controls = animate(HOLD_VALUE, 100, {
+      duration: FINISH_DURATION,
+      ease: "easeOut",
+      onUpdate: setProgress,
+      onComplete: () => onCompleteRef.current(),
+    });
+    return () => controls.stop();
+  }, [hasReachedHold, isDataReady]);
+
+  const step = Math.min(Math.floor(progress / STEP_SIZE), SEARCH_STEPS.length - 1);
 
   return (
-    <div role="status" aria-live="polite" className="space-y-6">
+    <div className="space-y-6">
       {/* Étape en cours + progression */}
       <div className="space-y-3">
         <div className="flex items-center gap-3">
@@ -35,7 +76,12 @@ export const SemanticLoader = () => {
             <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
           </span>
 
-          <div className="relative h-5 flex-1 overflow-hidden">
+          {/* Seule l'étape est annoncée aux lecteurs d'écran, pas chaque pas de la barre */}
+          <div
+            role="status"
+            aria-live="polite"
+            className="relative h-5 flex-1 overflow-hidden"
+          >
             <AnimatePresence mode="wait" initial={false}>
               <motion.p
                 key={step}
@@ -51,14 +97,15 @@ export const SemanticLoader = () => {
           </div>
         </div>
 
-        <div className="h-0.5 w-full overflow-hidden rounded-full bg-muted">
-          <motion.div
-            className="h-full rounded-full bg-primary"
-            initial={false}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-          />
-        </div>
+        {/* motion met déjà la valeur à jour à chaque frame : on neutralise la
+            transition CSS (transition-all) de l'indicateur shadcn, sinon elle
+            redémarre à chaque frame et la barre n'a le temps de rattraper
+            qu'une fois l'animation arrêtée. */}
+        <Progress
+          value={progress}
+          aria-label="Progression de la recherche"
+          className="h-0.5 **:transition-none!"
+        />
       </div>
 
       {/* Aperçu du squelette des résultats */}

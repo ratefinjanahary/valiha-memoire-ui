@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-// 8 min (aligné avec le backend) ; 72 max : limite de bcrypt
+// 8 caractères min (aligné avec le backend) ; 72 max : limite de bcrypt
 const newPasswordField = z
   .string()
   .min(8, "Le mot de passe doit faire au moins 8 caractères")
@@ -26,11 +26,9 @@ export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 // ─── Flux par code OTP ───
 // L'étape 1 (demande du code) réutilise forgotPasswordSchema.
-export const resetPasswordOtpSchema = z
-  .object({
-    code: z.string().regex(/^\d{6}$/, "Le code doit contenir 6 chiffres"),
-    newPassword: newPasswordField,
-    confirmPassword: confirmField,
-  })
-  .refine(passwordsMatch.check, passwordsMatch.options);
-export type ResetPasswordOtpFormData = z.infer<typeof resetPasswordOtpSchema>;
+// L'étape 2 (saisie du code) est un formulaire indépendant : le nouveau mot de passe
+// se saisit ensuite sur /reset-password, avec resetPasswordSchema.
+export const verifyOtpSchema = z.object({
+  code: z.string().regex(/^\d{6}$/, "Le code doit contenir 6 chiffres"),
+});
+export type VerifyOtpFormData = z.infer<typeof verifyOtpSchema>;

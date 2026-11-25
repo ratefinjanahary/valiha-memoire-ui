@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   LineChart,
   Line,
@@ -11,12 +11,12 @@ import {
   PieChart,
   Pie,
   Sector,
-  Legend,
 } from "recharts";
 import type { PieSectorShapeProps } from "recharts";
 import {
   XCircle,
   ChevronDown,
+  ListFilter,
   LucideIcon,
   BookOpenCheck,
   Clock,
@@ -32,7 +32,6 @@ import {
 import { memoireService } from "@/services/memoire.service";
 import { TopMemoire } from "@/types/memoire";
 import { TopMemoiresBarChart } from "@/components/dashboard/top-memoires-bar-chart";
-import { AuditLogsTable } from "@/components/dashboard/audit-logs-table";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +50,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -77,23 +81,54 @@ const MOIS = [
 const currentYear = new Date().getFullYear();
 const ANNEES = Array.from({ length: 6 }, (_, i) => currentYear - i);
 
-// Nuances dérivées de --primary: oklch(0.7122 0.1809 21.6630)
 const PIE_COLORS = [
-  "oklch(0.4800 0.1600 21.6630)",
-  "oklch(0.5900 0.1850 21.6630)",
-  "oklch(0.7122 0.1809 21.6630)",
-  "oklch(0.8100 0.1200 21.6630)",
-  "oklch(0.9000 0.0600 21.6630)",
+  "var(--color-primary)",              // votre primaire (déjà en OKLCH)
+  "oklch(0.5854 0.2041 277.1173)",     // #6366f1 — indigo
+  "oklch(0.6960 0.1700 162.4800)",     // #10b981 — émeraude
+  "oklch(0.7690 0.1650 70.0800)",      // #f59e0b — ambre
+  "oklch(0.6370 0.2080 25.3300)",      // #ef4444 — rouge
+  "oklch(0.6056 0.2189 292.7172)",     // #8b5cf6 — violet
+  "oklch(0.7038 0.1230 182.5025)",     // #14b8a6 — teal
 ];
 
+type PieDatum = ChartItem & { fill: string };
+
+// La couleur vient de la donnée elle-même (et non de l'index du secteur) :
+// le camembert et la légende lisent donc exactement la même source.
 const MyCustomPie = (props: PieSectorShapeProps) => (
   <Sector
     {...props}
-    fill={PIE_COLORS[props.index % PIE_COLORS.length]}
+    fill={(props.payload as PieDatum | undefined)?.fill ?? PIE_COLORS[0]}
     stroke="var(--color-background, #fff)"
     strokeWidth={2}
   />
 );
+
+// Attribue une couleur à chaque université sélectionnée.
+// - une université garde sa couleur tant qu'elle reste sélectionnée ;
+// - une nouvelle université reçoit une couleur libre (7 couleurs pour 5 max : jamais de doublon).
+function assignColors(
+  ids: string[],
+  previous: Record<string, string>
+): Record<string, string> {
+  const next: Record<string, string> = {};
+  const used = new Set<string>();
+
+  for (const id of ids) {
+    if (previous[id]) {
+      next[id] = previous[id];
+      used.add(previous[id]);
+    }
+  }
+  for (const id of ids) {
+    if (!next[id]) {
+      const free = PIE_COLORS.find((c) => !used.has(c)) ?? PIE_COLORS[0];
+      next[id] = free;
+      used.add(free);
+    }
+  }
+  return next;
+}
 
 const kpiConfig: {
   key: keyof Kpis;
@@ -165,6 +200,8 @@ export default function DashboardPage() {
   const [repartition, setRepartition] = useState<ChartItem[]>([]);
   const [universitesChoisies, setUniversitesChoisies] = useState<string[]>([]);
   const [repartitionLoading, setRepartitionLoading] = useState(false);
+  const [colorById, setColorById] = useState<Record<string, string>>({});
+  const repartitionRequestId = useRef(0);
 
   const [chartOptions, setChartOptions] = useState<ChartsOptions | null>(null);
 
@@ -184,7 +221,9 @@ export default function DashboardPage() {
         setEvolution(chartData.evolutionAnnee);
         setAnneeDebut(chartData.periode.anneeDebut);
         setRepartition(chartData.repartitionUniversite);
-        setUniversitesChoisies(chartData.repartitionUniversite.map((i) => i.id));
+        const initialIds = chartData.repartitionUniversite.map((i) => i.id);
+        setUniversitesChoisies(initialIds);
+        setColorById(assignColors(initialIds, {}));
         setChartOptions(chartData.options);
         setTopMemoires(topData);
       } catch (error) {
@@ -238,13 +277,18 @@ export default function DashboardPage() {
     if (next.length === 0 || next.length > MAX_UNIVERSITES) return;
 
     setUniversitesChoisies(next);
+    setColorById((prev) => assignColors(next, prev));
+
+    // Si l'utilisateur clique vite, seule la dernière réponse doit être appliquée
+    const requestId = ++repartitionRequestId.current;
     setRepartitionLoading(true);
     try {
-      setRepartition(await analyticsService.getRepartition(next));
+      const data = await analyticsService.getRepartition(next);
+      if (requestId === repartitionRequestId.current) setRepartition(data);
     } catch (e) {
       console.error("Erreur répartition par université", e);
     } finally {
-      setRepartitionLoading(false);
+      if (requestId === repartitionRequestId.current) setRepartitionLoading(false);
     }
   };
 
@@ -260,7 +304,12 @@ export default function DashboardPage() {
     name: String(item.annee),
     count: item.count,
   }));
+  const pieData: PieDatum[] = repartition.map((item) => ({
+    ...item,
+    fill: colorById[item.id] ?? PIE_COLORS[0],
+  }));
   const hasEvolutionData = chartOptions?.anneeMax != null;
+  const hasFiltreConsultations = filtreMois !== undefined || filtreAnnee !== undefined;
 
   // Fenêtres de 5 ans, de la plus récente à la plus ancienne
   const periodes: { debut: number; label: string }[] = [];
@@ -294,54 +343,103 @@ export default function DashboardPage() {
             <Card key={key}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                {isConsultations && (
-                  <div className="flex gap-1">
-                    <Select
-                      value={filtreMois ? String(filtreMois) : "all"}
-                      onValueChange={(v) => setFiltreMois(v === "all" ? undefined : Number(v))}
-                    >
-                      <SelectTrigger size="sm" className="h-6 w-auto gap-1 px-2 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Mois</SelectItem>
-                        {MOIS.map((m, i) => (
-                          <SelectItem key={m} value={String(i + 1)}>
-                            {m}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Select
-                      value={filtreAnnee ? String(filtreAnnee) : "all"}
-                      onValueChange={(v) => setFiltreAnnee(v === "all" ? undefined : Number(v))}
-                    >
-                      <SelectTrigger size="sm" className="h-6 w-auto gap-1 px-2 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Année</SelectItem>
-                        {ANNEES.map((a) => (
-                          <SelectItem key={a} value={String(a)}>
-                            {a}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
                 <Icon className="h-6 w-6 text-primary" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {value == null ? "—" : format ? format(value) : value}
+                <div className="flex items-end justify-between gap-2">
+                  <div>
+                    <div className="text-2xl font-bold">
+                      {value == null ? "—" : format ? format(value) : value}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {isConsultations && consultationsFiltrees !== null
+                        ? `Vues en ${filtreMois ? MOIS[filtreMois - 1] + " " : ""}${filtreAnnee ?? currentYear}`
+                        : description}
+                    </p>
+                  </div>
+                  {isConsultations && (
+                    <Popover>
+                      <PopoverTrigger
+                        render={
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="relative h-7 w-7"
+                            aria-label="Filtrer les consultations"
+                          >
+                            <ListFilter className="h-3.5 w-3.5" />
+                            {hasFiltreConsultations && (
+                              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
+                            )}
+                          </Button>
+                        }
+                      />
+                      <PopoverContent align="end" className="w-56 space-y-3 p-3">
+                        <p className="text-sm font-medium">Filtrer par période</p>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Mois</label>
+                          <Select
+                            value={filtreMois ? String(filtreMois) : "all"}
+                            onValueChange={(v) =>
+                              setFiltreMois(v === "all" || v === null ? undefined : Number(v))
+                            }
+                          >
+                            <SelectTrigger size="sm" className="w-full text-xs">
+                              <SelectValue>
+                                {filtreMois ? MOIS[filtreMois - 1] : "Tous"}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Tous</SelectItem>
+                              {MOIS.map((m, i) => (
+                                <SelectItem key={m} value={String(i + 1)}>
+                                  {m}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs text-muted-foreground">Année</label>
+                          <Select
+                            value={filtreAnnee ? String(filtreAnnee) : "all"}
+                            onValueChange={(v) =>
+                              setFiltreAnnee(v === "all" || v === null ? undefined : Number(v))
+                            }
+                          >
+                            <SelectTrigger size="sm" className="w-full text-xs">
+                              <SelectValue>{filtreAnnee ?? "Tous"}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Tous</SelectItem>
+                              {ANNEES.map((a) => (
+                                <SelectItem key={a} value={String(a)}>
+                                  {a}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {hasFiltreConsultations && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-full text-xs"
+                            onClick={() => {
+                              setFiltreMois(undefined);
+                              setFiltreAnnee(undefined);
+                            }}
+                          >
+                            Réinitialiser
+                          </Button>
+                        )}
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {isConsultations && consultationsFiltrees !== null
-                    ? `Vues en ${filtreMois ? MOIS[filtreMois - 1] + " " : ""}${filtreAnnee ?? currentYear}`
-                    : description}
-                </p>
               </CardContent>
             </Card>
           );
@@ -503,54 +601,52 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div
-                className={`h-64 w-full mt-4 transition-opacity ${
+                className={`mt-4 transition-opacity ${
                   repartitionLoading ? "opacity-50" : "opacity-100"
                 }`}
               >
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={repartition}
-                      dataKey="value"
-                      nameKey="label"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      shape={MyCustomPie}
-                    />
-                    <Legend
-                      content={({ payload }) => (
-                        <ul className="flex flex-wrap justify-center gap-3 pt-4">
-                          {payload?.map((entry, index) => (
-                            <li
-                              key={`legend-${index}`}
-                              className="flex items-center gap-1.5 text-xs text-muted-foreground"
-                            >
-                              <span
-                                className="inline-block h-3 w-3"
-                                style={{
-                                  backgroundColor: PIE_COLORS[index % PIE_COLORS.length],
-                                }}
-                              />
-                              <span>{entry.value}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    />
-                    <RechartsTooltip
-                      contentStyle={{
-                        borderRadius: "8px",
-                        border: "1px solid #eee",
-                        backgroundColor: "var(--color-background, #fff)",
-                        color: "var(--color-foreground, #111)",
-                      }}
-                      itemStyle={{ color: "var(--color-foreground, #111)" }}
-                      labelStyle={{ color: "var(--color-foreground, #111)" }}
-                      formatter={(value: any, name: any) => [value, name]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="h-52 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        dataKey="value"
+                        nameKey="label"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        shape={MyCustomPie}
+                      />
+                      <RechartsTooltip
+                        contentStyle={{
+                          borderRadius: "8px",
+                          border: "1px solid #eee",
+                          backgroundColor: "var(--color-background, #fff)",
+                          color: "var(--color-foreground, #111)",
+                        }}
+                        itemStyle={{ color: "var(--color-foreground, #111)" }}
+                        labelStyle={{ color: "var(--color-foreground, #111)" }}
+                        formatter={(value: any, name: any) => [value, name]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Légende : même source (pieData) et même ordre que le camembert */}
+                <ul className="flex flex-wrap justify-center gap-x-3 gap-y-1 pt-2">
+                  {pieData.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                    >
+                      <span
+                        className="inline-block h-3 w-3 shrink-0"
+                        style={{ backgroundColor: item.fill }}
+                      />
+                      <span>{item.label}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </CardContent>
@@ -580,10 +676,6 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
-        {/* Journal d'audit — à droite du treemap */}
-        <div className="col-span-3 sm:col-span-4">
-          <AuditLogsTable  />
-        </div>
       </div>
     </div>
   );

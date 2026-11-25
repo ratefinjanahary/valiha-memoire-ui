@@ -65,8 +65,13 @@ export const memoireService = {
   },
 
   // Lookups pour les filtres
-  getUniversites: async () => {
-    const { data } = await api.get<Universite[]>('/universites');
+  // Liste paginée (20 par page par défaut) avec recherche sur le nom ou le sigle
+  searchUniversites: async (params: { q?: string; page?: number; limit?: number }) => {
+    const cleanParams = { ...params };
+    if (!cleanParams.q || cleanParams.q.trim() === '') {
+      delete cleanParams.q;
+    }
+    const { data } = await api.get<{ data: Universite[]; meta: PaginationMeta }>('/universites', { params: cleanParams });
     return data;
   },
   

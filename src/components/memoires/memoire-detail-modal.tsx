@@ -30,6 +30,11 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose }: MemoireDetail
   const [memoire, setMemoire] = useState<Memoire | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const capitalize = (str?: string) => {
+    if (!str) return "";
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  }
+
   useEffect(() => {
     if (isOpen && memoireId) {
       const loadData = async () => {
@@ -70,8 +75,8 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose }: MemoireDetail
           <>
             <DialogHeader className="px-6 py-5 border-b bg-muted/20 relative">
               <div className="flex flex-wrap gap-2 mb-2 items-center">
-                <Badge variant="secondary" className="font-semibold lowercase bg-primary/10 text-primary hover:bg-primary/20">
-                  {memoire.typeDiplome}
+                <Badge variant="secondary" className="font-semibold bg-primary/10 text-primary hover:bg-primary/20">
+                  {capitalize(memoire.typeDiplome)}
                 </Badge>
                 <div className="flex items-center text-xs text-muted-foreground mr-4">
                   <Calendar className="w-3.5 h-3.5 mr-1" />
@@ -212,17 +217,19 @@ export function MemoireDetailModal({ memoireId, isOpen, onClose }: MemoireDetail
                 )}
               </div>
               <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    router.push(`/graph?focus=mem_${memoire.id}`);
-                    onClose();
-                  }}
-                  className="w-full sm:w-auto"
-                >
-                  <Network className="mr-2 h-4 w-4" />
-                  Voir dans le graphe
-                </Button>
+                {memoire.statut === "VALIDE" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      router.push(`/graph?focus=mem_${memoire.id}`);
+                      onClose();
+                    }}
+                    className="w-full sm:w-auto"
+                  >
+                    <Network className="mr-2 h-4 w-4" />
+                    Voir dans le graphe
+                  </Button>
+                )}
                 <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
                   Fermer
                 </Button>

@@ -19,6 +19,10 @@ interface SubmitProcessingViewProps {
   onBackToForm: () => void;
   onRetry: () => void;
   onClose: () => void;
+  /** Textes finaux : par défaut ceux de la soumission, à surcharger pour la modification */
+  successTitle?: string;
+  successSubtitle?: string;
+  errorTitle?: string;
 }
 
 type StepState = "done" | "active" | "failed" | "todo";
@@ -30,6 +34,9 @@ export function SubmitProcessingView({
   onBackToForm,
   onRetry,
   onClose,
+  successTitle = "Mémoire soumis avec succès !",
+  successSubtitle = "Il est en attente de modération.",
+  errorTitle = "La soumission a échoué",
 }: SubmitProcessingViewProps) {
   const reduceMotion = useReducedMotion();
   const { activeIndex, isComplete, progress } = useSubmissionSteps(steps, status);
@@ -40,13 +47,13 @@ export function SubmitProcessingView({
 
   const title =
     visual === "success"
-      ? "Mémoire soumis avec succès !"
+      ? successTitle
       : visual === "error"
-        ? "La soumission a échoué"
+        ? errorTitle
         : current.label;
   const subtitle =
     visual === "success"
-      ? "Il est en attente de modération."
+      ? successSubtitle
       : visual === "error"
         ? (errorMessage ?? "Une erreur est survenue.")
         : current.hint;

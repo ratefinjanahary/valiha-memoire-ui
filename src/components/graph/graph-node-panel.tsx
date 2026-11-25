@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import Link from "next/link";
-import { X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,11 +11,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { GraphEdgeType, GraphNode } from "@/types/graph";
 import {
   NODE_COLORS,
   NODE_TYPE_SINGULAR,
-  memoireHref,
   relationLabel,
 } from "./graph-config";
 
@@ -40,6 +39,9 @@ export function GraphNodePanel({
   onClose,
   onOpenMemoire,
 }: GraphNodePanelProps) {
+  // Réduit = seul l'en-tête reste visible ; la sélection du nœud n'est pas touchée
+  const [collapsed, setCollapsed] = useState(false);
+
   const groups = useMemo(() => {
     const map = new Map<string, GraphNode[]>();
     for (const { node: other, edgeType } of links) {
@@ -62,8 +64,8 @@ export function GraphNodePanel({
           : "";
 
   return (
-    <Card className="flex h-full flex-col gap-3 py-4 shadow-lg">
-      <CardHeader className="gap-1 px-4">
+    <Card className="pointer-events-auto flex max-h-full min-h-0 flex-col gap-0 bg-background py-0 shadow-lg backdrop-blur-none">
+      <CardHeader className="gap-1 px-4 pb-3 pt-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span
@@ -72,15 +74,32 @@ export function GraphNodePanel({
             />
             {NODE_TYPE_SINGULAR[node.type]}
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="-mr-2 -mt-2 h-7 w-7"
-            onClick={onClose}
-            aria-label="Fermer le panneau"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="-mr-2 -mt-2 flex">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setCollapsed((c) => !c)}
+              aria-expanded={!collapsed}
+              aria-label={collapsed ? "Déplier le panneau" : "Réduire le panneau"}
+              title={collapsed ? "Déplier" : "Réduire"}
+            >
+              {collapsed ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronUp className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onClose}
+              aria-label="Fermer le panneau"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <CardTitle className="text-base leading-snug">{node.label}</CardTitle>
         {node.type === "memoire" && d.auteur ? (
@@ -89,34 +108,46 @@ export function GraphNodePanel({
         {subtitle && <CardDescription>{subtitle}</CardDescription>}
       </CardHeader>
 
-      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4">
-        {node.type === "memoire" && (
-          <Button size="sm" onClick={() => onOpenMemoire(String(d.refId))}>
-            Ouvrir le mémoire
-          </Button>
+      {/* Animation de repli : la rangée de la grille passe de 1fr à 0fr,
+          le bord bas du panneau remonte vers l'en-tête */}
+      <div
+        aria-hidden={collapsed}
+        className={cn(
+          "grid min-h-0 flex-1 transition-[grid-template-rows,visibility] duration-300 ease-in-out",
+          collapsed ? "invisible grid-rows-[0fr]" : "visible grid-rows-[1fr]",
         )}
+      >
+        <div className="flex min-h-0 flex-col overflow-hidden">
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">
+            {node.type === "memoire" && (
+              <Button size="sm" onClick={() => onOpenMemoire(String(d.refId))}>
+                Ouvrir le mémoire
+              </Button>
+            )}
 
-        {groups.map(([label, nodes]) => (
-          <section key={label} className="space-y-1.5">
-            <h3 className="text-sm font-medium">
-              {label} ({nodes.length})
-            </h3>
-            <ul className="max-h-64 space-y-0.5 overflow-y-auto">
-              {nodes.map((n) => (
-                <li key={n.id}>
-                  <button
-                    type="button"
-                    onClick={() => onSelect(n.id)}
-                    className="w-full rounded px-2 py-1 text-left text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                  >
-                    <span className="line-clamp-2">{n.label}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </CardContent>
+            {groups.map(([label, nodes]) => (
+              <section key={label} className="space-y-1.5">
+                <h3 className="text-sm font-medium">
+                  {label} ({nodes.length})
+                </h3>
+                <ul className="max-h-64 space-y-0.5 overflow-y-auto">
+                  {nodes.map((n) => (
+                    <li key={n.id}>
+                      <button
+                        type="button"
+                        onClick={() => onSelect(n.id)}
+                        className="w-full rounded px-2 py-1 text-left text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      >
+                        <span className="line-clamp-2">{n.label}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </CardContent>
+        </div>
+      </div>
     </Card>
   );
 }

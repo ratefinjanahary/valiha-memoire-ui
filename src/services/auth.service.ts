@@ -30,8 +30,9 @@ export const authService = {
     return data;
   },
 
-  resetPasswordOtp: async (payload: { email: string; code: string; newPassword: string }) => {
-    const { data } = await api.post<{ message: string }>('/auth/reset-password-otp', payload);
+  // Étape 1 : vérifie le code ; renvoie un jeton à passer à resetPassword (page /reset-password)
+  verifyOtp: async (payload: { email: string; code: string }) => {
+    const { data } = await api.post<{ resetToken: string }>('/auth/verify-otp', payload);
     return data;
   },
   
